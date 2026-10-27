@@ -38,6 +38,40 @@ test_that("C++ and R chains are identical with these effects", {
                  n = 500, state = cppTestState, multinomial = TRUE)
 })
 
+# the effects that can exclude loops, with exclude.loops = TRUE
+noLoopsEffects <- createEffects(cppTestState) |>
+  addEffect(concentration_AC, origin = "origin", alpha = 2, exclude.loops = TRUE) |>
+  addEffect(concentration_GW_dyad_covar, origin = "origin", node.attribute = "size_similarity",
+            alpha = 2, exclude.loops = TRUE) |>
+  addEffect(concentration_AC_resource_covar_bin, origin = "origin", edge.attribute = "sex",
+            alpha = 2, exclude.loops = TRUE) |>
+  addEffect(dyadic_covariate, origin = "origin", node.attribute = "sameRegion",
+            exclude.loops = TRUE) |>
+  addEffect(dyadic_covariate_resource_attribute, origin = "origin",
+            node.attribute = "sameRegion", edge.attribute = "sex", exclude.loops = TRUE) |>
+  addEffect(same_covariate, origin = "origin", node.attribute = "region", exclude.loops = TRUE) |>
+  addEffect(present_relations, origin = "origin", exclude.loops = TRUE)
+
+test_that("C++ effects that exclude loops give the same values as R", {
+  expect_cpp_matches_r(noLoopsEffects, state = cppTestState)
+  parameters <- c(0.3, 0.1, 0.2, 0.3, 0.1, 0.2, -0.2)
+  compare_chains(noLoopsEffects, parameters, n = 5000, state = cppTestState)
+  compare_chains(noLoopsEffects, parameters, n = 500, state = cppTestState, multinomial = TRUE)
+})
+
+test_that("loops count unless exclude.loops = TRUE", {
+  dv <- myState$dep.var
+  with <- createEffects(myState) |> addEffect(dyadic_covariate, origin = "origin",
+                                              node.attribute = "sameRegion")
+  without <- createEffects(myState) |> addEffect(dyadic_covariate, origin = "origin",
+                                                 node.attribute = "sameRegion",
+                                                 exclude.loops = TRUE)
+  loops <- sum(diag(myState$cache[[dv]]$origin$valuedNetwork))
+  expect_equal(unname(getNetworkStatistics(dv, myState, myState$cache, with)) -
+                 unname(getNetworkStatistics(dv, myState, myState$cache, without)),
+               loops)
+})
+
 test_that("all exported effects have a C++ version", {
   ns <- asNamespace("realm")
   isEffect <- vapply(getNamespaceExports(ns), function(name) {

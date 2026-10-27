@@ -48,13 +48,13 @@ class ConcentrationAC : public Effect {
  public:
   explicit ConcentrationAC(double a) : alpha(a) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     double tie = net(ch).v(i, j);
     if (update < 0) return update * gMarAC(tie + update, alpha);
     return update * gMarAC(tie, alpha);
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     return gCumAC(net(ch).v(i, j), alpha);
   }
 };
@@ -65,11 +65,11 @@ class DyadicCovariate : public Effect {
  public:
   explicit DyadicCovariate(std::vector<double> a) : attribute(std::move(a)) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     return update * attribute[net(ch).idx(i, j)];
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     return net(ch).v(i, j) * attribute[net(ch).idx(i, j)];
   }
 };
@@ -266,7 +266,7 @@ class Concentration : public Effect {
   Concentration(bool isGW, Weight w, double a, std::vector<double> d, int r)
     : gw(isGW), weight(w), alpha(a), dyad(std::move(d)), resource(r) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     if (weight == DYAD && dyad[net(ch).idx(i, j)] == 0) return 0;
     if (weight == RESOURCE && ch.resourceValues[resource][edge] == 0) return 0;
     double tie = tieValue(ch, i, j);
@@ -275,7 +275,7 @@ class Concentration : public Effect {
     return g;
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     double g = gCum(tieValue(ch, i, j));
     if (weight == DYAD) return g * dyad[net(ch).idx(i, j)];
     return g;
@@ -549,11 +549,11 @@ class DyadicCovariateResourceAttribute : public Effect {
  public:
   DyadicCovariateResourceAttribute(std::vector<double> d, int r) : dyad(std::move(d)), resource(r) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     return update * ch.resourceValues[resource][edge] * dyad[net(ch).idx(i, j)];
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     return net(ch).resourceNetworks[resource][net(ch).idx(i, j)] * dyad[net(ch).idx(i, j)];
   }
 };
@@ -574,13 +574,13 @@ class InTiesLoops : public Effect {
 class PresentRelations : public Effect {
  public:
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     if (net(ch).v(i, j) == 0 && update > 0) return 1;
     if (net(ch).v(i, j) == -update && update < 0) return -1;
     return 0;
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j && net(ch).sameNodeSet) return 0;
+    if (excludeLoops && i == j && net(ch).sameNodeSet) return 0;
     return (net(ch).v(i, j) > 0) * 1;
   }
 };
@@ -874,5 +874,7 @@ std::unique_ptr<Effect> makeEffectFor(const Rcpp::List& spec, const Chain& chain
 std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
   std::unique_ptr<Effect> effect = makeEffectFor(spec, chain);
   effect->o = Rcpp::as<int>(spec["origin"]);
+  effect->excludeLoops = spec.containsElementNamed("excludeLoops") &&
+                         Rcpp::as<bool>(spec["excludeLoops"]);
   return effect;
 }

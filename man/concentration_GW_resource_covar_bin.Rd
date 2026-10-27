@@ -14,6 +14,7 @@ concentration_GW_resource_covar_bin(
   j,
   edge,
   update,
+  exclude.loops = FALSE,
   getTargetContribution = FALSE,
   alpha = 2
 )
@@ -21,6 +22,10 @@ concentration_GW_resource_covar_bin(
 \arguments{
 \item{origin}{The name of the origin (see \code{\link[=createOrigin]{createOrigin()}}) of the
 resources.}
+
+\item{exclude.loops}{Should loops (resources staying at their origin) be
+excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+Loops exist only for an origin with the nodeset of the destinations.}
 }
 \value{
 Returns the change statistic or target statistic of the effect for

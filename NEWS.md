@@ -37,3 +37,9 @@
 - `loops_additional_origin` is deprecated: create the additional origin as
   an origin and use `addEffect(loops, origin = <its name>)`, which gives the
   same statistics.
+- Effects that excluded loops (`concentration_AC`, `concentration_GW` and
+  their `_dyad_covar` and `_resource_covar_bin` versions, `dyadic_covariate`,
+  `dyadic_covariate_resource_attribute`, `same_covariate`, `sim_covariate`,
+  `present_relations`) now include them by default; the new argument
+  `exclude.loops = TRUE` excludes them as before. The example data are
+  re-estimated.

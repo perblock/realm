@@ -49,6 +49,9 @@ cppEffectSpec <- function(effects, state) {
     if (!is.null(args$lambda)) {
       spec$lambda <- as.numeric(args$lambda)
     }
+    if (!is.null(args$exclude.loops)) {
+      spec$excludeLoops <- as.logical(args$exclude.loops)
+    }
     if (!is.null(args$attribute.index) && !identical(args$attribute.index, quote(expr = ))) {
       spec$attribute <- as.numeric(state[[args$attribute.index]]$data)
       spec$attributeIsMatrix <- is.matrix(state[[args$attribute.index]]$data)

@@ -110,6 +110,9 @@ concentration_basic_cube <- function(dep.var = 1, origin, state, cache, i, j, ed
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -123,10 +126,11 @@ concentration_basic_cube <- function(dep.var = 1, origin, state, cache, i, j, ed
 #' internal use by the estimation algorithm.
 #' @keywords internal
 concentration_AC <- function(dep.var = 1, origin, state, cache, i, j, edge, update, 
+                             exclude.loops = FALSE,
                              getTargetContribution = FALSE, alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_AC function must be 1 or larger")
   
-  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
+  if (exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -193,6 +197,9 @@ concentration_AC <- function(dep.var = 1, origin, state, cache, i, j, edge, upda
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -206,10 +213,11 @@ concentration_AC <- function(dep.var = 1, origin, state, cache, i, j, edge, upda
 #' internal use by the estimation algorithm.
 #' @keywords internal
 concentration_GW <- function(dep.var = 1, origin, state, cache, i, j, edge, update, 
+                             exclude.loops = FALSE,
                              getTargetContribution = FALSE, alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_GW function must be 1 or larger")
   
-  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
+  if (exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -256,6 +264,9 @@ concentration_GW <- function(dep.var = 1, origin, state, cache, i, j, edge, upda
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param state 
 #' @param resource.attribute.index 
 #' @param cache 
@@ -275,11 +286,12 @@ concentration_AC_resource_covar_bin <- function(dep.var = 1, origin,
                                                 cache, i, j, 
                                                 edge,
                                                 update, 
+                                                exclude.loops = FALSE,
                                                 getTargetContribution = FALSE, 
                                                 alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_AC_resource_covar_bin function must be 1 or larger")
   
-  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
+  if (exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -347,6 +359,9 @@ concentration_AC_resource_covar_bin <- function(dep.var = 1, origin,
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param state 
 #' @param resource.attribute.index 
 #' @param cache 
@@ -366,11 +381,12 @@ concentration_GW_resource_covar_bin <- function(dep.var = 1, origin,
                                                 cache, i, j, 
                                                 edge,
                                                 update, 
+                                                exclude.loops = FALSE,
                                                 getTargetContribution = FALSE, 
                                                 alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_GW_resource_covar_bin function must be 1 or larger")
   
-  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
+  if (exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -424,6 +440,9 @@ concentration_GW_resource_covar_bin <- function(dep.var = 1, origin,
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -438,6 +457,7 @@ concentration_GW_resource_covar_bin <- function(dep.var = 1, origin,
 #' internal use by the estimation algorithm.
 #' @keywords internal
 concentration_AC_dyad_covar <- function(dep.var = 1, origin, attribute.index, state, cache, i, j, edge, update, 
+                                            exclude.loops = FALSE,
                                             getTargetContribution = FALSE, alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_AC_dyad_covar function must be 1 or larger")
   # if(!all(state[[attribute.index]]$data == t(state[[attribute.index]]$data))) stop("attribute.index in concentration_AC_dyad_covar_bin function must be symmetric")
@@ -445,7 +465,7 @@ concentration_AC_dyad_covar <- function(dep.var = 1, origin, attribute.index, st
   if(dim(state[[attribute.index]]$data)[1] != dim(state[[attribute.index]]$data)[2]) stop("attribute.index in concentration_AC_dyad_covar_bin function must be a square matrix")
   if(length(dim(state[[attribute.index]]$data)) != 2) stop("attribute.index in concentration_AC_dyad_covar_bin function must be a square matrix")
   
-  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
+  if (exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -511,6 +531,9 @@ concentration_AC_dyad_covar <- function(dep.var = 1, origin, attribute.index, st
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -525,6 +548,7 @@ concentration_AC_dyad_covar <- function(dep.var = 1, origin, attribute.index, st
 #' internal use by the estimation algorithm.
 #' @keywords internal
 concentration_GW_dyad_covar <- function(dep.var = 1, origin, attribute.index, state, cache, i, j, edge, update, 
+                                        exclude.loops = FALSE,
                                         getTargetContribution = FALSE, alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_GW function must be 1 or larger")
   # if(!all(state[[attribute.index]]$data == t(state[[attribute.index]]$data))) stop("attribute.index in concentration_GW_dyad_covar_bin function must be symmetric")
@@ -532,7 +556,7 @@ concentration_GW_dyad_covar <- function(dep.var = 1, origin, attribute.index, st
   if(dim(state[[attribute.index]]$data)[1] != dim(state[[attribute.index]]$data)[2]) stop("attribute.index in concentration_GW_dyad_covar_bin function must be a square matrix")
   if(length(dim(state[[attribute.index]]$data)) != 2) stop("attribute.index in concentration_GW_dyad_covar_bin function must be a square matrix")
   
-  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
+  if (exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     

@@ -102,11 +102,13 @@ Rules:
 - **The cache already reflects the removal when a resource is added.** In a move,
   the "add" step is calculated after the resource has been removed from the
   cache, and its destination is `NA` at that point. Use `i` for its origin.
-- **Loops exist only for an origin with the nodeset of the destinations.** An
-  effect that excludes loops checks
-  `i == j && cache[[dep.var]][[origin]]$sameNodeSet`; an effect that is about
-  loops (a resource staying at its origin) goes into `sameNodeSetEffects` in
-  `R/2_effectFunctions.R`, which allows it only for such origins.
+- **Loops exist only for an origin with the nodeset of the destinations.**
+  Loops count by default. An effect for which excluding loops makes sense has
+  the argument `exclude.loops = FALSE` and checks
+  `exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet`
+  (`exclude.loops = TRUE` is only allowed for such origins). An effect that is
+  about loops (a resource staying at its origin) goes into `sameNodeSetEffects`
+  in `R/2_effectFunctions.R`, which allows it only for such origins.
 - **Name arguments `attribute.index` (location or dyadic covariate) and
   `resource.attribute.index` (resource covariate).** Users specify them as
   `node.attribute` and `edge.attribute` in `addEffect()`, which renames them.
@@ -225,6 +227,7 @@ which translates the effect's arguments:
 | R argument | in `spec` | read in C++ with |
 |---|---|---|
 | `alpha` | `spec["alpha"]` | `alphaOf(spec, "name")` (checks `alpha >= 1`) or `Rcpp::as<double>(spec["alpha"])` |
+| `exclude.loops` | `spec["excludeLoops"]` | `excludeLoops` of `Effect`, set by `makeEffect()` |
 | `attribute.index` | the covariate's data as a numeric vector | `attributeOf(spec)` |
 | `resource.attribute.index` | the covariate's name | `chain.resourceIndex(Rcpp::as<std::string>(spec["resourceAttribute"]))` |
 

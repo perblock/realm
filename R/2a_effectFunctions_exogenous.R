@@ -49,6 +49,9 @@ alter_covariate <-
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -72,8 +75,9 @@ dyadic_covariate <-
            j,
            edge,
            update,
+           exclude.loops = FALSE,
            getTargetContribution = FALSE) {
-    if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) {
+    if (exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet) {
       return(0)
     }
     
@@ -97,6 +101,9 @@ dyadic_covariate <-
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param attribute.index 
 #' @param resource.attribute.index 
 #' @param state 
@@ -122,8 +129,9 @@ dyadic_covariate_resource_attribute <-
            j,
            edge,
            update,
+           exclude.loops = FALSE,
            getTargetContribution = FALSE) {
-    if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) {
+    if (exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet) {
       return(0)
     }
     
@@ -184,6 +192,9 @@ resource_covar_to_node_covar <-
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -207,8 +218,9 @@ same_covariate <-
            j,
            edge,
            update,
+           exclude.loops = FALSE,
            getTargetContribution = FALSE) {
-    if (i == j) {
+    if (exclude.loops && i == j) {
       return(0)
     }
     
@@ -232,6 +244,9 @@ same_covariate <-
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -255,8 +270,9 @@ sim_covariate <-
            j,
            edge,
            update,
+           exclude.loops = FALSE,
            getTargetContribution = FALSE) {
-    if (i == j) {
+    if (exclude.loops && i == j) {
       return(0)
     }
     

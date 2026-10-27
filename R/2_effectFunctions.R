@@ -76,6 +76,10 @@ checkEffectNodeSets <- function(effectName, args, state) {
     stop(paste0("Effect ", effectName, " needs an origin with the nodeset of the destinations (",
                 destinations, ")."))
   }
+  if (isTRUE(args$exclude.loops) && !identical(originSet, destinations)) {
+    stop(paste0("Effect ", effectName, ": exclude.loops needs an origin with the nodeset of ",
+                "the destinations (", destinations, "); other origins have no loops."))
+  }
   role <- attributeRoles[effectName]
   if (!is.na(role) && is.character(args$attribute.index)) {
     expected <- switch(role,
@@ -310,6 +314,9 @@ in_weights_GW <-
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
 #' resources.
+#' @param exclude.loops Should loops (resources staying at their origin) be
+#' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
+#' Loops exist only for an origin with the nodeset of the destinations.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -331,8 +338,9 @@ present_relations <-
            j,
            edge,
            update,
+           exclude.loops = FALSE,
            getTargetContribution = FALSE) {
-    if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) {
+    if (exclude.loops && i == j && cache[[dep.var]][[origin]]$sameNodeSet) {
       return(0)
     }
 

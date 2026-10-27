@@ -131,6 +131,7 @@ struct Chain {
 class Effect {
  public:
   int o = -1;  // the effect's origin (index in Chain::origins), -1 for none
+  bool excludeLoops = false;  // exclude.loops in R (effects that can exclude loops)
   virtual ~Effect() {}
   virtual double change(const Chain& ch, int i, int j, int edge, int update) const = 0;
   virtual double target(const Chain& ch, int i, int j) const = 0;

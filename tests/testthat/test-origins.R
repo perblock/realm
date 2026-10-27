@@ -104,6 +104,14 @@ test_that("effects that depend on an origin need a valid one", {
                "needs an origin with the nodeset of the destinations")
 })
 
+test_that("loops can only be excluded for an origin with the nodeset of the destinations", {
+  expect_error(createEffects(twoOrigins) |>
+                 addEffect(concentration_AC, origin = "originRegion", exclude.loops = TRUE),
+               "exclude.loops needs an origin with the nodeset of the destinations")
+  expect_no_error(createEffects(twoOrigins) |>
+                    addEffect(concentration_AC, origin = "origin", exclude.loops = TRUE))
+})
+
 test_that("covariates must have the nodesets of their role in the effect", {
   # an origin covariate of the organisations for an origin in regions
   expect_error(createEffects(twoOrigins) |>
