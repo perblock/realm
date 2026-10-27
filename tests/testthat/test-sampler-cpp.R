@@ -53,7 +53,7 @@ test_that("C++ effects give the same values as the R effects", {
   effects <- createEffects(myState) |>
     addEffect(loops) |>
     addEffect(concentration_AC, alpha = 4) |>
-    addEffect(reciprocity_AC, alpha = 2) |>
+    addEffect(in_weights_AC, alpha = 2) |>
     addEffect(dyadic_covariate, node.attribute = "sameRegion") |>
     addEffect(alter_covariate, node.attribute = "size") |>
     addEffect(alter_covariate, node.attribute = "size", loop.contribution = FALSE) |>
@@ -92,13 +92,13 @@ test_that("C++ effects give the same values as the R effects", {
 test_that("C++ and R chains are identical for the example model", {
   compare_chains(myEffects, myResDN$estimates, n = 5000)
   compare_chains(myEffects, myResDN$estimates, n = 5000, allowLoops = FALSE)
-  compare_chains(myEffects, rep(0, 7), n = 5000)
+  compare_chains(myEffects, rep(0, 6), n = 5000)
 })
 
 test_that("C++ and R chains are identical with the multinomial proposal", {
   compare_chains(myEffects, myResDN$estimates, n = 1000, multinomial = TRUE)
   compare_chains(myEffects, myResDN$estimates, n = 1000, multinomial = TRUE, allowLoops = FALSE)
-  compare_chains(myEffects, rep(0, 7), n = 1000, multinomial = TRUE)
+  compare_chains(myEffects, rep(0, 6), n = 1000, multinomial = TRUE)
 })
 
 test_that("estimation gives the same results with the C++ and the R sampler", {
@@ -128,7 +128,7 @@ test_that("the multinomial proposal works with a single effect", {
 
 test_that("simulation needs one parameter per effect", {
   expect_error(
-    simulateMobilityNetworks(myState, myEffects, parameters = rep(0.1, 6),
+    simulateMobilityNetworks(myState, myEffects, parameters = rep(0.1, 5),
                              allowLoops = TRUE, burnin = 10, thinning = 10,
                              nSimulations = 1),
     "one value per effect"

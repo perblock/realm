@@ -3,9 +3,6 @@
 
 test_that("effects check their covariates when they are added", {
   checkState <- myState
-  asym <- matrix(runif(17 * 17), 17, 17)
-  checkState$asym <- createNetwork(asym, nodeSet = c("organisations", "organisations"))
-  checkState$nonbinary <- createNetwork(asym + t(asym), nodeSet = c("organisations", "organisations"))
   checkState$sex_counts <- createNodeVariable(rpois(742, 2), nodeSet = "people",
                                               addSame = FALSE, addSim = FALSE)
   # addEffect() finds the state by its name, which does not see objects that
@@ -14,39 +11,27 @@ test_that("effects check their covariates when they are added", {
   on.exit(rm("checkState", envir = globalenv()), add = TRUE)
 
   base <- createEffects(checkState)
-  expect_error(addEffect(base, reciprocity_min_dyad_covar, node.attribute = "asym"),
-               "must be symmetric")
-  expect_error(addEffect(base, reciprocity_AC_dyad_covar, node.attribute = "asym"),
-               "must be symmetric")
-  expect_error(addEffect(base, reciprocity_GW_dyad_covar, node.attribute = "asym"),
-               "must be symmetric")
-  expect_error(addEffect(base, reciprocity_AC_dyad_covar_bin, node.attribute = "nonbinary"),
-               "must be 0 or 1")
-  expect_error(addEffect(base, reciprocity_GW_dyad_covar_bin, node.attribute = "nonbinary"),
-               "must be 0 or 1")
   expect_error(addEffect(base, crowding_out_prop_covar_bin, edge.attribute = "sex_counts"),
                "binary covariates")
   expect_error(addEffect(base, staying_by_prop_bin_inflow, edge.attribute = "sex_counts"),
                "binary covariates")
 
-  expect_no_error(addEffect(base, reciprocity_AC_dyad_covar_bin, node.attribute = "sameRegion"))
   expect_no_error(addEffect(base, crowding_out_prop_covar_bin, edge.attribute = "sex"))
 })
 
 test_that("estimation and simulation check effect inputs against their state", {
   # effects created for one state, used with a state whose covariate is invalid
   effects <- createEffects(myState) |>
-    addEffect(reciprocity_min_dyad_covar, node.attribute = "sameRegion")
+    addEffect(crowding_out_prop_covar_bin, edge.attribute = "sex")
   badState <- myState
-  badState$sameRegion$data[1, 2] <- 0
-  badState$sameRegion$data[2, 1] <- 1
+  badState$sex$data[1] <- 2
 
   alg <- createAlgorithm(badState, effects)
-  expect_error(estimateMobilityNetwork(badState, effects, alg), "must be symmetric")
+  expect_error(estimateMobilityNetwork(badState, effects, alg), "binary covariates")
   expect_error(simulateMobilityNetworks(badState, effects, parameters = 0,
                                         allowLoops = TRUE, burnin = 10, thinning = 10,
                                         nSimulations = 1),
-               "must be symmetric")
+               "binary covariates")
 })
 
 test_that("effects work when the dependent variable is not called 'transfers'", {

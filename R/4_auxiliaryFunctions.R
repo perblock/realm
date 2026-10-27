@@ -670,7 +670,7 @@ print.result.realm <- function(x, covMat = FALSE, ...) {
 #' \donttest{
 #' # test whether other effects should be included
 #' myEffects2 <- createEffects(myState) |>
-#'   addEffect(transitivity_AC, alpha = 8)
+#'   addEffect(in_weights_AC, alpha = 4)
 #'
 #' test_ME.2 <- scoreTest(myResDN, myEffects2)
 #' }

@@ -67,32 +67,6 @@ effect_specs <- list(
   in_weights_GW_alpha4 = list(.effect = "in_weights_GW", alpha = 4),
   present_relations = list(),
 
-  # reciprocity
-  reciprocity_AC = list(alpha = 2),
-  reciprocity_AC_alpha4 = list(.effect = "reciprocity_AC", alpha = 4),
-  reciprocity_AC_dyad_covar = list(attribute.index = "size_similarity", alpha = 2),
-  reciprocity_AC_dyad_covar_bin = list(attribute.index = "sameRegion", alpha = 2),
-  reciprocity_GW = list(alpha = 2),
-  reciprocity_GW_alpha4 = list(.effect = "reciprocity_GW", alpha = 4),
-  reciprocity_GW_dyad_covar = list(attribute.index = "size_similarity", alpha = 2),
-  reciprocity_GW_dyad_covar_bin = list(attribute.index = "sameRegion", alpha = 2),
-  reciprocity_basic = list(),
-  reciprocity_min = list(),
-  reciprocity_min_dyad_covar = list(attribute.index = "sameRegion"),
-  reciprocity_min_resource_covar = list(resource.attribute.index = "sex"),
-
-  # transitivity and triads
-  transitivity_AC = list(alpha = 1.1),
-  transitivity_AC_alpha4 = list(.effect = "transitivity_AC", alpha = 4),
-  transitivity_GW = list(alpha = 1.1),
-  transitivity_GW_alpha4 = list(.effect = "transitivity_GW", alpha = 4),
-  transitivity_basic = list(),
-  transitivity_min = list(),
-  transitivity_netflow = list(),
-  triad120C = list(),
-  triad120D = list(),
-  triad120U = list(),
-
   # endogenous, covariate-based
   avoiding_dissimilar_covar_bin = list(resource.attribute.index = "sex"),
   avoiding_dissimilar_covar_cont = list(resource.attribute.index = "second_or"),

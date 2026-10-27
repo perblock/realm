@@ -40,7 +40,7 @@ test_that("parallel estimation stores statistics in the order of the simulations
   }
   # the two chains (51 and 50 simulations) are not copies of each other
   expect_false(identical(res$deps[1:50], res$deps[52:101]))
-  expect_no_error(scoreTest(res, createEffects(myState) |> addEffect(transitivity_AC, alpha = 8)))
+  expect_no_error(scoreTest(res, createEffects(myState) |> addEffect(in_weights_AC, alpha = 4)))
   expect_no_error(extractTraces(res, myEffects))
 })
 

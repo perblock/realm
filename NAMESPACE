@@ -54,18 +54,6 @@ export(
   concentration_norm_squared,
   concentration_prop_orig_cov,
 
-  # effect functions: reciprocity
-  reciprocity_basic,
-  reciprocity_min, reciprocity_min_resource_covar, reciprocity_min_dyad_covar,
-  reciprocity_GW, reciprocity_GW_dyad_covar_bin, reciprocity_GW_dyad_covar,
-  reciprocity_AC, reciprocity_AC_dyad_covar_bin, reciprocity_AC_dyad_covar,
-  
-  # effect functions: transitivity
-  transitivity_basic, transitivity_min, transitivity_netflow, 
-  transitivity_GW,
-  transitivity_AC,
-  triad120D, triad120U, triad120C,
-  
   # effect functions: endogeneous covariate based
   crowding_out_prop_covar_bin, staying_by_prop_bin_inflow, 
   joining_similar_avoiding_dissimilar_covar_bin,

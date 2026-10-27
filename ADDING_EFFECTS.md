@@ -35,7 +35,7 @@ the squared covariate of the destination.
 ## 1. The R function
 
 Effects live in `R/2*_effectFunctions*.R`, grouped by type (exogenous, loops,
-concentration, reciprocity, transitivity, covariate-based). Every effect has this
+concentration, covariate-based). Every effect has this
 signature:
 
 ```r
@@ -76,8 +76,6 @@ What the function can use:
 |---|---|
 | `cache[[dep.var]]$valuedNetwork` | number of resources on each tie (locations x locations) |
 | `cache[[dep.var]]$resourceNetworks[[name]]` | sum of a resource covariate on each tie |
-| `cache[[dep.var]]$netFlowsNetwork` | `valued - t(valued)` |
-| `cache[[dep.var]]$minNetwork` | `pmin(valued, t(valued))`, diagonal 0 |
 | `state[[attribute.index]]$data` | a location covariate (vector) or dyadic covariate (matrix) |
 | `state[[resource.attribute.index]]$data` | a resource covariate (one value per resource) |
 | `state[[dep.var]]$data` | the edgelist (origin, destination of each resource) |
@@ -172,8 +170,6 @@ R, e.g. `ch.resourceValues[r][e] == j + 1`). The `Chain` gives access to:
 | C++ | R |
 |---|---|
 | `ch.v(i, j)` | `cache[[dep.var]]$valuedNetwork[i, j]` |
-| `ch.netFlows[ch.idx(i, j)]` | `cache[[dep.var]]$netFlowsNetwork[i, j]` |
-| `ch.minNet[ch.idx(i, j)]` | `cache[[dep.var]]$minNetwork[i, j]` |
 | `ch.resourceNetworks[r][ch.idx(i, j)]` | `cache[[dep.var]]$resourceNetworks[[name]][i, j]` |
 | `ch.resourceValues[r][edge]` | `state[[resource.attribute.index]]$data[edge]` |
 | `ch.sender[e]`, `ch.receiver[e]` | `state[[dep.var]]$data[e, ]` (`-1` while `e` is moved) |

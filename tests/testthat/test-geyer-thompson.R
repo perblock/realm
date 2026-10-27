@@ -79,9 +79,9 @@ test_that("the C++ pseudo-likelihood equals the R pseudo-likelihood", {
   resourceEffects <- createEffects(cppTestState) |>
     addEffect(loops) |>
     addEffect(concentration_GW, alpha = 2) |>
-    addEffect(reciprocity_min_resource_covar, edge.attribute = "second_or") |>
+    addEffect(avoiding_dissimilar_covar_cont, edge.attribute = "second_or") |>
     addEffect(loops_resource_covar, edge.attribute = "sex") |>
-    addEffect(transitivity_AC)
+    addEffect(in_weights_AC)
   for (effects in list(myEffects, resourceEffects)) {
     dv <- cppTestState$dep.var
     fR <- mpleObjectiveR(dv, cppTestState, cppTestState$cache, effects, TRUE)
@@ -139,7 +139,7 @@ test_that("grouped choice sets give the same pseudo-likelihood as recomputing th
     addEffect(loops_additional_origin, edge.attribute = "second_or") |>
     addEffect(joining_similar_avoiding_dissimilar_covar_cont, edge.attribute = "second_or") |>
     addEffect(concentration_AC_resource_covar_bin, edge.attribute = "sex", alpha = 2) |>
-    addEffect(transitivity_AC, alpha = 4)
+    addEffect(in_weights_AC, alpha = 4)
   dv <- cppTestState$dep.var
   for (effects in list(myEffects, groupEffects)) {
     for (allowLoops in c(TRUE, FALSE)) {

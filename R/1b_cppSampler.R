@@ -4,7 +4,7 @@
 # chain as the R sampler in 1_hiddenFunctions.R.
 
 # effects with a C++ version
-cppEffects <- c("loops", "concentration_AC", "reciprocity_AC", "dyadic_covariate",
+cppEffects <- c("loops", "concentration_AC", "dyadic_covariate",
                 "alter_covariate", "resource_covar_to_node_covar",
                 "loops_resource_covar",
                 "loops_AC", "loops_GW", "loops_additional_origin",
@@ -13,20 +13,12 @@ cppEffects <- c("loops", "concentration_AC", "reciprocity_AC", "dyadic_covariate
                 "concentration_GW", "concentration_AC_dyad_covar",
                 "concentration_GW_dyad_covar", "concentration_AC_resource_covar_bin",
                 "concentration_GW_resource_covar_bin",
-                "reciprocity_GW", "reciprocity_AC_dyad_covar",
-                "reciprocity_AC_dyad_covar_bin", "reciprocity_GW_dyad_covar",
-                "reciprocity_GW_dyad_covar_bin",
                 "in_weights_AC", "in_weights_GW",
-                "transitivity_basic", "transitivity_min", "transitivity_netflow",
-                "transitivity_AC", "transitivity_GW",
-                "triad120C", "triad120D", "triad120U",
                 "concentration_basic", "concentration_basic_cube",
                 "concentration_prop", "concentration_prop_AC", "concentration_max",
                 "concentration_basic_squared", "concentration_norm",
                 "concentration_norm_squared", "concentration_prop_orig_cov",
                 "concentration_rankGW",
-                "reciprocity_basic", "reciprocity_min",
-                "reciprocity_min_dyad_covar", "reciprocity_min_resource_covar",
                 "same_covariate", "sim_covariate", "dyadic_covariate_resource_attribute",
                 "in_ties_loops", "present_relations",
                 "staying_by_prop_bin_inflow", "crowding_out_prop_covar_bin",
@@ -93,11 +85,6 @@ useCppSampler <- function(effects, state) {
 cppChainInputs <- function(dep.var, state, cache) {
   state <- toListState(state, dep.var)
   cache <- toListCache(cache)
-  # caches created by versions before 2.2 have no two-path network, which the
-  # C++ chain needs (as toMutableCache for the R sampler)
-  if (is.null(cache[[dep.var]]$twoPathNetwork) && !is.null(cache[[dep.var]]$netFlowsNetwork)) {
-    cache[[dep.var]]$twoPathNetwork <- getTwoPathNetwork(cache[[dep.var]])
-  }
   edgelist <- state[[dep.var]]
   nodeName <- edgelist$nodeSet[1]
   resourceName <- edgelist$nodeSet[3]

@@ -147,10 +147,7 @@ class Sampler {
     resource.attr("names") = ch.resourceNames;
     return Rcpp::List::create(
       Rcpp::Named("valuedNetwork") = asMatrix(ch.valued, ch.n),
-      Rcpp::Named("resourceNetworks") = resource,
-      Rcpp::Named("netFlowsNetwork") = asMatrix(ch.netFlows, ch.n),
-      Rcpp::Named("minNetwork") = asMatrix(ch.minNet, ch.n),
-      Rcpp::Named("twoPathNetwork") = asMatrix(ch.twoPaths, ch.n));
+      Rcpp::Named("resourceNetworks") = resource);
   }
 };
 
@@ -167,9 +164,6 @@ void setupSampler(Sampler& s,
     s.ch.receiver.push_back(edgelist(e, 1) - 1);
   }
   s.ch.valued = asVector(cache["valuedNetwork"]);
-  s.ch.netFlows = asVector(cache["netFlowsNetwork"]);
-  s.ch.minNet = asVector(cache["minNetwork"]);
-  s.ch.twoPaths = asVector(cache["twoPathNetwork"]);
   if (cache.containsElementNamed("resourceNetworks")) {
     Rcpp::List rn = cache["resourceNetworks"];
     if (rn.size() > 0) {

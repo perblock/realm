@@ -1,8 +1,8 @@
 # scoreTest: score test conditional on the statistics of the model's effects
 
 candidates <- createEffects(myState) |>
-  addEffect(transitivity_AC, alpha = 8) |>
-  addEffect(transitivity_min)
+  addEffect(in_weights_AC, alpha = 4) |>
+  addEffect(present_relations)
 
 test_that("estimation with returnDeps stores the statistics of the model's effects", {
   dv <- myResDN$state$dep.var

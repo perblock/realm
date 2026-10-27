@@ -63,25 +63,6 @@ class ConcentrationAC : public Effect {
   }
 };
 
-// reciprocity_AC (R/2d_effectFunctions_reciprocity.R)
-class ReciprocityAC : public Effect {
-  double alpha;
- public:
-  explicit ReciprocityAC(double a) : alpha(a) {}
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    double nIncoming = ch.v(j, i);
-    double cont = update * gMarAC(nIncoming, alpha);
-    double nOutgoing = ch.v(i, j);
-    cont = cont + nIncoming * (gMarAC(nOutgoing + update, alpha) - gMarAC(nOutgoing, alpha));
-    return cont;
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    return ch.v(i, j) * gMarAC(ch.v(j, i), alpha);
-  }
-};
-
 // dyadic_covariate (R/2a_effectFunctions_exogenous.R)
 class DyadicCovariate : public Effect {
   std::vector<double> attribute;  // n x n, column-major
@@ -309,52 +290,6 @@ class Concentration : public Effect {
   }
 };
 
-// reciprocity_GW, reciprocity_AC_dyad_covar, reciprocity_AC_dyad_covar_bin,
-// reciprocity_GW_dyad_covar, reciprocity_GW_dyad_covar_bin
-// (R/2d_effectFunctions_reciprocity.R)
-class Reciprocity : public Effect {
- public:
-  enum Weight { NONE, DYAD, DYAD_BIN };
- private:
-  bool gw;
-  Weight weight;
-  double alpha;
-  std::vector<double> dyad;  // n x n covariate
-  double g(double y) const { return gw ? gMarGW(y, alpha) : gMarAC(y, alpha); }
-  double a(const Chain& ch, int i, int j) const { return dyad[ch.idx(i, j)]; }
- public:
-  Reciprocity(bool isGW, Weight w, double al, std::vector<double> d)
-    : gw(isGW), weight(w), alpha(al), dyad(std::move(d)) {}
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    if (weight == NONE) {
-      double nIncoming = ch.v(j, i);
-      double cont = update * g(nIncoming);
-      double nOutgoing = ch.v(i, j);
-      return cont + nIncoming * (g(nOutgoing + update) - g(nOutgoing));
-    }
-    if (weight == DYAD) {
-      double nIncoming = ch.v(j, i);
-      double cont = update * g(nIncoming) * a(ch, i, j);
-      double nOutgoing = ch.v(i, j);
-      return cont + nIncoming * (g(nOutgoing + update) * a(ch, j, i) -
-                                 g(nOutgoing) * a(ch, j, i));
-    }
-    double nIncoming = ch.v(j, i) * a(ch, j, i);
-    double cont = update * g(nIncoming) * a(ch, i, j);
-    double nOutgoing = ch.v(i, j) * a(ch, i, j);
-    return cont + nIncoming * (g(nOutgoing + (update * a(ch, i, j))) - g(nOutgoing));
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    if (weight == NONE) return ch.v(i, j) * g(ch.v(j, i));
-    if (weight == DYAD) return ch.v(i, j) * g(ch.v(j, i)) * a(ch, i, j);
-    double nOutgoing = ch.v(i, j) * a(ch, i, j);
-    double nIncoming = ch.v(j, i) * a(ch, j, i);
-    return nOutgoing * g(nIncoming);
-  }
-};
-
 // in_weights_AC, in_weights_GW (R/2_effectFunctions.R): the AC or GW function
 // of the inflow of the destination
 class InWeights : public Effect {
@@ -376,225 +311,6 @@ class InWeights : public Effect {
   double target(const Chain& ch, int i, int j) const override {
     double w = inWeight(ch, j);
     return (gw ? gCumGW(w, alpha) : gCumAC(w, alpha)) / ch.n;
-  }
-};
-
-// ---- transitivity and triad effects (R/2e_effectFunctions_transitivity.R)
-
-// rows i, j and columns i, j of a network, with the loop entries set to 0
-struct RowsCols {
-  std::vector<double> ri, rj, ci, cj;
-  RowsCols(const Chain& ch, const std::vector<double>& m, int i, int j)
-    : ri(ch.n), rj(ch.n), ci(ch.n), cj(ch.n) {
-    for (int k = 0; k < ch.n; ++k) {
-      ri[k] = m[ch.idx(i, k)];
-      rj[k] = m[ch.idx(j, k)];
-      ci[k] = m[ch.idx(k, i)];
-      cj[k] = m[ch.idx(k, j)];
-    }
-    ri[i] = 0;
-    rj[j] = 0;
-    ci[i] = 0;
-    cj[j] = 0;
-  }
-};
-
-// R's sum(a * b) and sum(a * b * c): element-wise products, long double sum
-inline double sumProd(const std::vector<double>& a, const std::vector<double>& b) {
-  long double total = 0;
-  for (size_t k = 0; k < a.size(); ++k) total += a[k] * b[k];
-  return (double)total;
-}
-inline double sumProd(const std::vector<double>& a, const std::vector<double>& b,
-                      const std::vector<double>& c) {
-  long double total = 0;
-  for (size_t k = 0; k < a.size(); ++k) total += (a[k] * b[k]) * c[k];
-  return (double)total;
-}
-
-// transitivity_basic
-class TransitivityBasic : public Effect {
- public:
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    RowsCols n(ch, ch.valued, i, j);
-    return update * (sumProd(n.ri, n.cj) + sumProd(n.ri, n.rj) + sumProd(n.ci, n.cj));
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    RowsCols n(ch, ch.valued, i, j);
-    return ch.v(i, j) * sumProd(n.ri, n.cj);
-  }
-};
-
-// transitivity_min
-class TransitivityMin : public Effect {
- public:
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    if (update == 0) return 0;
-    double nf = ch.netFlows[ch.idx(i, j)];
-    if (update > 0 && nf >= 0) return 0;
-    if (update < 0 && nf > 0) return 0;
-    RowsCols m(ch, ch.minNet, i, j);
-    double dyadValue = ch.minNet[ch.idx(i, j)];
-    long double v = 0;
-    for (int k = 0; k < ch.n; ++k) {
-      double twoPath = std::min(m.ri[k], m.cj[k]);
-      if (update > 0) v += dyadValue < twoPath;
-      if (update < 0) v += dyadValue <= twoPath;
-    }
-    return update > 0 ? (double)v : -(double)v;
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    RowsCols m(ch, ch.minNet, i, j);
-    double dyadValue = ch.minNet[ch.idx(i, j)];
-    long double v = 0;
-    for (int k = 0; k < ch.n; ++k) v += std::min(dyadValue, std::min(m.ri[k], m.cj[k]));
-    return (double)v / 6;
-  }
-};
-
-// transitivity_netflow
-class TransitivityNetflow : public Effect {
-  // sum(pmin(getPathWeights(ik, kj), x)) over k, for row a and column b of
-  // the net flow network
-  static double sumPathWeights(const Chain& ch, int a, int b, double x) {
-    long double total = 0;
-    for (int k = 0; k < ch.n; ++k) {
-      double ik = ch.netFlows[ch.idx(a, k)], kj = ch.netFlows[ch.idx(k, b)];
-      double w = std::min(std::abs(ik), std::abs(kj));
-      if (ik < 0 && kj < 0) w = 0;
-      total += std::min(w, x);
-    }
-    return (double)total;
-  }
- public:
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    double nf = ch.netFlows[ch.idx(i, j)];
-    double contributionBefore = 0;
-    // the path weights are those of i -> k -> j if the net flow is (or
-    // becomes) positive, and of j -> k -> i otherwise
-    bool forward;
-    if (nf > 0) {
-      forward = true;
-      contributionBefore = sumPathWeights(ch, i, j, nf);
-    } else if (nf < 0) {
-      forward = false;
-      contributionBefore = sumPathWeights(ch, j, i, ch.netFlows[ch.idx(j, i)]);
-    } else {
-      forward = update > 0;
-    }
-    double tieWeightAfter = nf + update;
-    double contributionAfter = forward ? sumPathWeights(ch, i, j, std::abs(tieWeightAfter))
-                                       : sumPathWeights(ch, j, i, std::abs(tieWeightAfter));
-    return contributionAfter - contributionBefore;
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    double nf = ch.netFlows[ch.idx(i, j)];
-    if (nf <= 0) return 0;
-    return sumPathWeights(ch, i, j, nf) / 3;
-  }
-};
-
-// transitivity_AC, transitivity_GW
-class TransitivityACGW : public Effect {
-  bool gw;
-  double alpha;
-  // g(0), g(1), ...: computed when first needed
-  mutable std::vector<double> gTable;
-  double g(double y) const {
-    if (!gw) return 1 - rpow(1 - 1 / alpha, y);
-    if (alpha == 1) return y;
-    return (1 - rpow(alpha, -y)) / (alpha - 1);
-  }
-  // g(y) of a two-path count, from the table (the same value as g(y); the
-  // power function is the slow part of this effect)
-  double gCount(double y) const {
-    if (!(y >= 0 && y <= 1e6 && y == std::floor(y))) return g(y);
-    size_t k = (size_t)y;
-    while (gTable.size() <= k) gTable.push_back(g((double)gTable.size()));
-    return gTable[k];
-  }
-  // R's sum(w * g_mar(y))
-  double sumWeighted(const std::vector<double>& w, const std::vector<double>& y) const {
-    long double total = 0;
-    for (size_t k = 0; k < w.size(); ++k) total += w[k] * gCount(y[k]);
-    return (double)total;
-  }
- public:
-  TransitivityACGW(bool isGW, double a) : gw(isGW), alpha(a) {}
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    RowsCols n(ch, ch.valued, i, j);
-    int N = ch.n;
-
-    // part 1: i,j closes two-path
-    double cont = update * gCount(ch.tp(i, j));
-
-    // part 2: i,j closes instar
-    std::vector<double> riU = n.ri;
-    riU[j] = riU[j] + update;
-    std::vector<double> before(N), after(N);
-    for (int k = 0; k < N; ++k) {
-      before[k] = ch.tp(i, k);
-      after[k] = before[k] + update * n.rj[k];
-    }
-    double conBe = sumWeighted(n.ri, before) - (n.ri[j] * gCount(before[j]));
-    double conAf = sumWeighted(riU, after) - (riU[j] * gCount(after[j]));
-    cont = cont + (conAf - conBe);
-
-    // part 3: i,j closes outstar
-    for (int k = 0; k < N; ++k) {
-      before[k] = ch.tp(k, j);
-      after[k] = before[k] + update * n.ci[k];
-    }
-    conBe = sumWeighted(n.cj, before);
-    conAf = sumWeighted(n.cj, after);
-    cont = cont + (conAf - conBe);
-    return cont;
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    return ch.v(i, j) * gCount(ch.tp(i, j));
-  }
-};
-
-// triad120C, triad120D, triad120U
-class Triad120 : public Effect {
- public:
-  enum Type { C, D, U };
- private:
-  Type type;
- public:
-  explicit Triad120(Type t) : type(t) {}
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    RowsCols n(ch, ch.valued, i, j);
-    double nji = ch.v(j, i);
-    if (type == C) {
-      double cont = update * sumProd(n.ri, n.cj) * nji;
-      cont = cont + update * sumProd(n.ci, n.rj) * nji;
-      cont = cont + update * sumProd(n.rj, n.ri, n.ci);
-      return cont + update * sumProd(n.ci, n.cj, n.rj);
-    }
-    if (type == D) {
-      double cont = update * sumProd(n.ci, n.cj) * nji;
-      return cont + update * sumProd(n.ri, n.cj, n.rj);
-    }
-    double cont = update * sumProd(n.ri, n.rj) * nji;
-    return cont + update * sumProd(n.cj, n.ri, n.ci);
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    RowsCols n(ch, ch.valued, i, j);
-    double recip = ch.v(i, j) * ch.v(j, i);
-    if (type == C) return recip * sumProd(n.ri, n.cj);
-    if (type == D) return recip * sumProd(n.ci, n.cj) / 2;
-    return recip * sumProd(n.ri, n.rj) / 2;
   }
 };
 
@@ -833,62 +549,6 @@ class ConcentrationRankGW : public Effect {
   }
 };
 
-// ---- remaining reciprocity effects (R/2d_effectFunctions_reciprocity.R)
-
-// reciprocity_basic
-class ReciprocityBasic : public Effect {
- public:
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    return update * ch.v(j, i);
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    return ch.v(i, j) * ch.v(j, i) / 2;
-  }
-};
-
-// reciprocity_min, reciprocity_min_dyad_covar
-class ReciprocityMin : public Effect {
-  bool weighted;
-  std::vector<double> dyad;  // n x n covariate (weighted only)
- public:
-  ReciprocityMin(bool w, std::vector<double> d) : weighted(w), dyad(std::move(d)) {}
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    double nf = ch.netFlows[ch.idx(i, j)];
-    bool changes = (update > 0 && nf < 0) || (update < 0 && nf <= 0);
-    if (!changes) return 0;
-    if (weighted) return update * dyad[ch.idx(i, j)];
-    return update > 0 ? 1 : -1;
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    if (!weighted) return ch.minNet[ch.idx(i, j)] / 2;
-    return std::min(ch.minNet[ch.idx(i, j)], ch.minNet[ch.idx(j, i)]) *
-             dyad[ch.idx(i, j)] / 2;
-  }
-};
-
-// reciprocity_min_resource_covar
-class ReciprocityMinResource : public Effect {
-  int resource;
-  double r(const Chain& ch, int i, int j) const {
-    return ch.resourceNetworks[resource][ch.idx(i, j)];
-  }
- public:
-  explicit ReciprocityMinResource(int res) : resource(res) {}
-  double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    double weight = update * ch.resourceValues[resource][edge];
-    return std::min(r(ch, i, j) + weight, r(ch, j, i)) - std::min(r(ch, i, j), r(ch, j, i));
-  }
-  double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    return std::min(r(ch, i, j), r(ch, j, i)) / 2;
-  }
-};
-
 // ---- remaining exogenous and other effects (R/2a_effectFunctions_exogenous.R,
 // R/2_effectFunctions.R)
 
@@ -1120,9 +780,6 @@ std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
   if (name == "concentration_AC") {
     return E(new ConcentrationAC(alphaOf(spec, "concentration_AC")));
   }
-  if (name == "reciprocity_AC") {
-    return E(new ReciprocityAC(alphaOf(spec, "reciprocity_AC")));
-  }
   if (name == "dyadic_covariate") return E(new DyadicCovariate(attributeOf(spec)));
   if (name == "alter_covariate") {
     return E(new AlterCovariate(attributeOf(spec), loopContributionOf(spec)));
@@ -1178,22 +835,6 @@ std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
     }
     return E(new Concentration(gw, w, alpha, dyad, resource));
   }
-  if (name == "reciprocity_GW" || name == "reciprocity_AC_dyad_covar" ||
-      name == "reciprocity_AC_dyad_covar_bin" || name == "reciprocity_GW_dyad_covar" ||
-      name == "reciprocity_GW_dyad_covar_bin") {
-    bool gw = name.find("_GW") != std::string::npos;
-    double alpha = alphaOf(spec, name.c_str());
-    Reciprocity::Weight w = Reciprocity::NONE;
-    std::vector<double> dyad;
-    if (name.find("dyad_covar") != std::string::npos) {
-      w = name.find("_bin") != std::string::npos ? Reciprocity::DYAD_BIN : Reciprocity::DYAD;
-      dyad = attributeOf(spec);
-      if (dyad.size() != (size_t)chain.n * chain.n) {
-        Rcpp::stop("attribute.index in %s function must be a square matrix", name);
-      }
-    }
-    return E(new Reciprocity(gw, w, alpha, dyad));
-  }
   if (name == "in_weights_AC" || name == "in_weights_GW") {
     double alpha = Rcpp::as<double>(spec["alpha"]);
     if (alpha <= 0) {
@@ -1201,15 +842,6 @@ std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
     }
     return E(new InWeights(name == "in_weights_GW", alpha));
   }
-  if (name == "transitivity_basic") return E(new TransitivityBasic());
-  if (name == "transitivity_min") return E(new TransitivityMin());
-  if (name == "transitivity_netflow") return E(new TransitivityNetflow());
-  if (name == "transitivity_AC" || name == "transitivity_GW") {
-    return E(new TransitivityACGW(name == "transitivity_GW", Rcpp::as<double>(spec["alpha"])));
-  }
-  if (name == "triad120C") return E(new Triad120(Triad120::C));
-  if (name == "triad120D") return E(new Triad120(Triad120::D));
-  if (name == "triad120U") return E(new Triad120(Triad120::U));
   if (name == "concentration_basic") return E(new ConcentrationBasic(2));
   if (name == "concentration_basic_cube") return E(new ConcentrationBasic(3));
   if (name == "concentration_max") return E(new ConcentrationMax());
@@ -1230,19 +862,6 @@ std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
   if (name == "concentration_prop") return E(new ConcentrationProp(false, 0));
   if (name == "concentration_prop_AC") {
     return E(new ConcentrationProp(true, alphaOf(spec, "concentration_prop_AC")));
-  }
-  if (name == "reciprocity_basic") return E(new ReciprocityBasic());
-  if (name == "reciprocity_min") return E(new ReciprocityMin(false, {}));
-  if (name == "reciprocity_min_dyad_covar") {
-    std::vector<double> dyad = attributeOf(spec);
-    if (dyad.size() != (size_t)chain.n * chain.n) {
-      Rcpp::stop("attribute.index in reciprocity_min_dyad_covar function must be a square matrix");
-    }
-    return E(new ReciprocityMin(true, dyad));
-  }
-  if (name == "reciprocity_min_resource_covar") {
-    return E(new ReciprocityMinResource(
-      chain.resourceIndex(Rcpp::as<std::string>(spec["resourceAttribute"]))));
   }
   if (name == "same_covariate" || name == "sim_covariate") {
     return E(new DyadicCovariate(attributeOf(spec)));

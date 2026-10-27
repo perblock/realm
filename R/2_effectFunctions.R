@@ -9,21 +9,6 @@
 
 # checks per effect: functions of the state and the effect's arguments
 effectInputChecks <- local({
-  symmetric <- function(effect) {
-    function(state, args) {
-      d <- state[[args$attribute.index]]$data
-      if (!all(d == t(d))) {
-        stop(paste("attribute.index in", effect, "function must be symmetric"))
-      }
-    }
-  }
-  binaryDyadic <- function(effect) {
-    function(state, args) {
-      if (!all(state[[args$attribute.index]]$data %in% c(0, 1))) {
-        stop(paste("all values of attribute.index in", effect, "function must be 0 or 1"))
-      }
-    }
-  }
   binaryResource <- function(effect) {
     function(state, args) {
       if (!all(state[[args$resource.attribute.index]]$data %in% c(0, 1))) {
@@ -32,13 +17,6 @@ effectInputChecks <- local({
     }
   }
   list(
-    reciprocity_min_dyad_covar = list(symmetric("reciprocity_min_dyad_covar")),
-    reciprocity_AC_dyad_covar = list(symmetric("reciprocity_AC_dyad_covar")),
-    reciprocity_GW_dyad_covar = list(symmetric("reciprocity_GW_dyad_covar")),
-    reciprocity_AC_dyad_covar_bin = list(symmetric("reciprocity_AC_dyad_covar_bin"),
-                                         binaryDyadic("reciprocity_AC_dyad_covar_bin")),
-    reciprocity_GW_dyad_covar_bin = list(symmetric("reciprocity_GW_dyad_covar_bin"),
-                                         binaryDyadic("reciprocity_GW_dyad_covar_bin")),
     crowding_out_prop_covar_bin = list(binaryResource("crowding_out_prop_covar_bin")),
     staying_by_prop_bin_inflow = list(binaryResource("staying_by_prop_bin_inflow"))
   )

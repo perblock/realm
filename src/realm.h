@@ -34,55 +34,28 @@ struct Chain {
   std::vector<std::vector<double>> resourceValues;  // per covariate, per resource
 
   // cache (as cache[[dep.var]] in R)
-  std::vector<double> valued, netFlows, minNet;
-  std::vector<double> twoPaths;           // twoPathNetwork (getTwoPathNetwork in R)
+  std::vector<double> valued;
   std::vector<std::vector<double>> resourceNetworks;
 
   inline int idx(int i, int j) const { return i + j * n; }
   inline double v(int i, int j) const { return valued[idx(i, j)]; }
-  inline double tp(int i, int j) const { return twoPaths[idx(i, j)]; }
 
   // same logic as updateWeightedCache / the in-place .update in R
   void update(int s, int r, int edge, int u) {
     for (size_t k = 0; k < resourceNetworks.size(); ++k) {
       resourceNetworks[k][idx(s, r)] += u * resourceValues[k][edge];
     }
-    // the following uses information about the net flow network before the update
-    if (u > 0 && netFlows[idx(s, r)] < 0) minNet[idx(s, r)] += 1;
-    if (u < 0 && netFlows[idx(s, r)] <= 0 && s != r) minNet[idx(s, r)] -= 1;
-    if (minNet[idx(s, r)] < 0) {
-      Rcpp::stop("Error in cache update, negative min tie. %d %d %d", s + 1, r + 1, u);
-    }
-    minNet[idx(r, s)] = minNet[idx(s, r)];
-    // two-paths, as twoPathIncrements in R: row s gains u times row r and
-    // column r gains u times column s, both without loops
-    if (s != r) {
-      for (int k = 0; k < n; ++k) {
-        if (k != r) twoPaths[idx(s, k)] += u * v(r, k);
-        if (k != s) twoPaths[idx(k, r)] += u * v(k, s);
-      }
-    }
     valued[idx(s, r)] += u;
-    netFlows[idx(s, r)] += u;
-    netFlows[idx(r, s)] -= u;
   }
 
   // cells changed by an update of s-r, to restore them exactly
   struct Cells {
-    double valued, nf_sr, nf_rs, min_sr, min_rs;
+    double valued;
     std::vector<double> resource;
-    std::vector<double> tpRow, tpCol;     // row s and column r of twoPaths
   };
   Cells getCells(int s, int r) const {
-    Cells c{v(s, r), netFlows[idx(s, r)], netFlows[idx(r, s)],
-            minNet[idx(s, r)], minNet[idx(r, s)], {}};
+    Cells c{v(s, r), {}};
     for (const auto& m : resourceNetworks) c.resource.push_back(m[idx(s, r)]);
-    c.tpRow.resize(n);
-    c.tpCol.resize(n);
-    for (int k = 0; k < n; ++k) {
-      c.tpRow[k] = tp(s, k);
-      c.tpCol[k] = tp(k, r);
-    }
     return c;
   }
   void restoreCells(int s, int r, const Cells& c) {
@@ -90,14 +63,6 @@ struct Chain {
       resourceNetworks[k][idx(s, r)] = c.resource[k];
     }
     valued[idx(s, r)] = c.valued;
-    netFlows[idx(s, r)] = c.nf_sr;
-    netFlows[idx(r, s)] = c.nf_rs;
-    minNet[idx(s, r)] = c.min_sr;
-    minNet[idx(r, s)] = c.min_rs;
-    for (int k = 0; k < n; ++k) {
-      twoPaths[idx(s, k)] = c.tpRow[k];
-      twoPaths[idx(k, r)] = c.tpCol[k];
-    }
   }
 
   int resourceIndex(const std::string& name) const {

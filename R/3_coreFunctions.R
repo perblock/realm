@@ -315,7 +315,7 @@ realmDependent <- createEdgelist
 #' myEffects <- createEffectsObject(
 #'   list(
 #'     list("loops"),
-#'     list("reciprocity_min"),
+#'     list("present_relations"),
 #'     list("dyadic_covariate", attribute.index = "sameRegion"),
 #'     list("alter_covariate", attribute.index = "size"),
 #'     list("resource_covar_to_node_covar",
@@ -1119,7 +1119,7 @@ realmEstimate <- estimateMobilityNetwork
 #' mySimDN <- simulateMobilityNetworks(
 #'   myState,
 #'   myEffects,
-#'   parameters = c(2, 1, 1.5, 0.5, 0.1, -1, -0.5),
+#'   parameters = c(2, 1, 0.5, 0.1, -1, -0.5),
 #'   allowLoops = TRUE,
 #'   burnin = 450,
 #'   thinning = 150,

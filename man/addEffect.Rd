@@ -25,12 +25,12 @@ A function to add additional effects to a realm effects object
 # Create effects object and add effects
 myE1 <- createEffects(myState)
 myE1 <- addEffect(myE1, loops)
-myE1 <- addEffect(myE1, reciprocity_basic)
+myE1 <- addEffect(myE1, present_relations)
 myE1 <- addEffect(myE1, effectName = same_covariate, attribute.index = "region")
 
 # Or simpler
 myE1 <- createEffects(myState) |>
   addEffect(loops) |>
-  addEffect(reciprocity_basic) |>
+  addEffect(present_relations) |>
   addEffect(same_covariate, attribute.index = "region")
 }
