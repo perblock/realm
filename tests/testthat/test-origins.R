@@ -158,3 +158,44 @@ test_that("a state needs an origin of the same resources", {
   expect_error(realmDataCreate(transfers, destinations, people, organisations),
                "cannot be used as the name of an origin")
 })
+
+test_that("loops_additional_origin is deprecated and equals loops with a second origin", {
+  expect_warning(deprecated <- createEffects(myState) |>
+                   addEffect(loops_additional_origin, edge.attribute = "second_or"),
+                 "deprecated")
+  # the additional origin of the example data as an origin
+  local({
+    secondOrigin <- myState
+    secondOrigin$second_origin <- createOrigin(myState$second_or$data,
+                                               nodeSet = c("organisations", "people"))
+    secondOrigin$origins <- c("origin", "second_origin")
+    secondOrigin$cache <- createInternalCache(
+      secondOrigin, resourceCovariates = names(myState$cache[[myState$dep.var]]$destinations$resourceInflows)
+    )
+    assign("secondOrigin", secondOrigin, envir = globalenv())
+  })
+  on.exit(rm("secondOrigin", envir = globalenv()), add = TRUE)
+  loopsSecond <- createEffects(secondOrigin) |> addEffect(loops, origin = "second_origin")
+  dv <- myState$dep.var
+  for (useCpp in c(TRUE, FALSE)) {
+    old <- options(realm.useCpp = useCpp)
+    expect_equal(unname(getNetworkStatistics(dv, secondOrigin, secondOrigin$cache, loopsSecond)),
+                 unname(getNetworkStatistics(dv, myState, myState$cache, deprecated)))
+    options(old)
+  }
+  set.seed(9)
+  for (edge in sample(length(myState[[dv]]$data), 50)) {
+    for (j in c(myState$second_or$data[edge], sample(17, 1))) {
+      for (update in c(-1, 1)) {
+        expect_equal(
+          loops(dep.var = dv, origin = "second_origin", state = secondOrigin,
+                cache = secondOrigin$cache, i = secondOrigin$second_origin$data[edge],
+                j = j, edge = edge, update = update),
+          loops_additional_origin(dep.var = dv, resource.attribute.index = "second_or",
+                                  state = myState, cache = myState$cache, i = NA,
+                                  j = j, edge = edge, update = update)
+        )
+      }
+    }
+  }
+})

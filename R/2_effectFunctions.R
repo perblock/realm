@@ -22,6 +22,15 @@ effectInputChecks <- local({
   )
 })
 
+# deprecated effects, with what to use instead; the warning is given when the
+# effect is added to a model (createEffectsObject)
+deprecatedEffects <- c(
+  loops_additional_origin = paste(
+    "loops_additional_origin is deprecated: create the additional origin as an",
+    "origin (createOrigin()) and use addEffect(loops, origin = <its name>)."
+  )
+)
+
 # the nodeset of the covariate given as attribute.index: a covariate of the
 # destinations (used for j), of the origin's locations (used for i), or a
 # dyadic covariate between both (used for [i, j])

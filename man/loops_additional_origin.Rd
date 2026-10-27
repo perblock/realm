@@ -27,4 +27,10 @@ as a resource.attribute.index.
 The question modeled is: Do individuals stay in the additional location of
 origin, compared to going to a different location?
 }
+\details{
+This effect is deprecated. Create the additional origin as an origin with
+\code{\link[=createOrigin]{createOrigin()}} and use the effect \code{\link[=loops]{loops()}} with this origin, e.g.
+\code{addEffect(loops, origin = "second_origin")}, which gives the same
+statistics.
+}
 \keyword{internal}

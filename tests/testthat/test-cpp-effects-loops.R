@@ -1,6 +1,7 @@
 # C++ versions of the loops effects (src/effects.cpp)
 
-loopsEffects <- createEffects(myState) |>
+# loops_additional_origin is deprecated (with a warning), but still tested
+loopsEffects <- suppressWarnings(createEffects(myState) |>
   addEffect(loops_AC, origin = "origin", alpha = 2) |>
   addEffect(loops_AC, origin = "origin", alpha = 1.5) |>
   addEffect(loops_GW, origin = "origin", alpha = 2) |>
@@ -8,7 +9,7 @@ loopsEffects <- createEffects(myState) |>
   addEffect(loops_additional_origin, edge.attribute = "second_or") |>
   addEffect(loops_x_loops_additional_origin, origin = "origin", edge.attribute = "second_or") |>
   addEffect(loops_node_covar, origin = "origin", node.attribute = "size") |>
-  addEffect(loops_resource_covar_node_covar, origin = "origin", edge.attribute = "sex", node.attribute = "size")
+  addEffect(loops_resource_covar_node_covar, origin = "origin", edge.attribute = "sex", node.attribute = "size"))
 
 test_that("C++ loops effects give the same values as the R effects", {
   expect_cpp_matches_r(loopsEffects)

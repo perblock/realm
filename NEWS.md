@@ -34,3 +34,6 @@
   `alter_covariate` and `resource_covar_to_node_covar` are removed (loops
   always count, also in `resource_covar_to_node_covar`, which excluded them
   by default). The example data are re-estimated.
+- `loops_additional_origin` is deprecated: create the additional origin as
+  an origin and use `addEffect(loops, origin = <its name>)`, which gives the
+  same statistics.

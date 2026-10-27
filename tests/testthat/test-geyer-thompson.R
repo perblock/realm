@@ -130,7 +130,7 @@ test_that("grouped choice sets give the same pseudo-likelihood as recomputing th
   # effects with resource covariates, including a continuous one, and effects
   # that look at the individual resources of a cell
   groupEffects <- createEffects(cppTestState) |>
-    addEffect(loops_additional_origin, edge.attribute = "second_or") |>
+    addEffect(loops_x_loops_additional_origin, origin = "origin", edge.attribute = "second_or") |>
     addEffect(joining_similar_avoiding_dissimilar_covar_cont, origin = "origin", edge.attribute = "second_or") |>
     addEffect(concentration_AC_resource_covar_bin, origin = "origin", edge.attribute = "sex", alpha = 2) |>
     addEffect(in_weights_AC, alpha = 4)

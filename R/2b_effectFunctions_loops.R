@@ -349,6 +349,11 @@ loops_resource_covar <-
 #' The question modeled is: Do individuals stay in the additional location of 
 #' origin, compared to going to a different location?
 #'
+#' This effect is deprecated. Create the additional origin as an origin with
+#' [createOrigin()] and use the effect [loops()] with this origin, e.g.
+#' `addEffect(loops, origin = "second_origin")`, which gives the same
+#' statistics.
+#'
 #' @param dep.var 
 #' @param resource.attribute.index 
 #' @param state 

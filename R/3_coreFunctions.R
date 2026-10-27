@@ -380,6 +380,10 @@ createEffectsObject <-
     # effects that depend on the origin of the resources need one, the others
     # cannot have one
     for (i in seq_along(effects)) {
+      effectName <- if (is.list(effectInit[[i]])) effectInit[[i]][[1]] else effectInit[[i]]
+      if (effectName %in% names(deprecatedEffects)) {
+        warning(deprecatedEffects[[effectName]], call. = FALSE)
+      }
       needsOrigin <- "origin" %in% names(signatures[[i]])
       origin <- if (is.list(setParams[[i]])) setParams[[i]]$origin else NULL
       if (needsOrigin && (!is.character(origin) || length(origin) != 1)) {
