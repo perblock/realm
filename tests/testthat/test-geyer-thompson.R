@@ -36,7 +36,7 @@ test_that("Geyer-Thompson step is restricted when observed statistics are far aw
 })
 
 test_that("MPLE is finite and close to the reference estimates", {
-  mple <- getMPLE(myState$dep.var, myState, myState$cache, myEffects, allowLoops = TRUE)
+  mple <- getMPLE(myState$dep.var, myState, myState$cache, myEffects)
 
   expect_named(mple, myEffects$name)
   expect_true(all(is.finite(mple)))
@@ -47,7 +47,7 @@ test_that("MPLE is finite and close to the reference estimates", {
 test_that("MPLE does not change the state", {
   state <- myState
   frozen <- unserialize(serialize(state, NULL))
-  getMPLE(state$dep.var, state, state$cache, myEffects, allowLoops = TRUE)
+  getMPLE(state$dep.var, state, state$cache, myEffects)
   expect_identical(state, frozen)
 })
 
@@ -77,15 +77,15 @@ test_that("algorithm objects without phase2Method use Robbins-Monro", {
 
 test_that("the C++ pseudo-likelihood equals the R pseudo-likelihood", {
   resourceEffects <- createEffects(cppTestState) |>
-    addEffect(loops) |>
-    addEffect(concentration_GW, alpha = 2) |>
-    addEffect(avoiding_dissimilar_covar_cont, edge.attribute = "second_or") |>
-    addEffect(loops_resource_covar, edge.attribute = "sex") |>
+    addEffect(loops, origin = "origin") |>
+    addEffect(concentration_GW, origin = "origin", alpha = 2) |>
+    addEffect(avoiding_dissimilar_covar_cont, origin = "origin", edge.attribute = "second_or") |>
+    addEffect(loops_resource_covar, origin = "origin", edge.attribute = "sex") |>
     addEffect(in_weights_AC)
   for (effects in list(myEffects, resourceEffects)) {
     dv <- cppTestState$dep.var
-    fR <- mpleObjectiveR(dv, cppTestState, cppTestState$cache, effects, TRUE)
-    fC <- mpleObjectiveCpp(dv, cppTestState, cppTestState$cache, effects, TRUE)
+    fR <- mpleObjectiveR(dv, cppTestState, cppTestState$cache, effects)
+    fC <- mpleObjectiveCpp(dv, cppTestState, cppTestState$cache, effects)
     set.seed(1)
     for (theta in list(rep(0, length(effects$name)), runif(length(effects$name), -0.5, 0.5))) {
       r <- fR(theta)
@@ -101,33 +101,27 @@ test_that("the C++ pseudo-likelihood equals the R pseudo-likelihood", {
 test_that("MPLE is the same with the C++ and the R pseudo-likelihood", {
   dv <- myState$dep.var
   old <- options(realm.useCpp = FALSE)
-  mpleR <- getMPLE(dv, myState, myState$cache, myEffects, allowLoops = TRUE)
+  mpleR <- getMPLE(dv, myState, myState$cache, myEffects)
   options(old)
-  mpleCpp <- getMPLE(dv, myState, myState$cache, myEffects, allowLoops = TRUE)
+  mpleCpp <- getMPLE(dv, myState, myState$cache, myEffects)
   expect_equal(mpleCpp, mpleR, tolerance = 1e-8)
-
-  mpleNoLoops <- getMPLE(dv, myState, myState$cache,
-                         createEffects(myState) |> addEffect(concentration_AC, alpha = 2),
-                         allowLoops = FALSE)
-  # the observed data contain loops, which are impossible without loops
-  expect_null(mpleNoLoops)
 })
 
 test_that("the MPLE stores each distinct choice set once, weighted by its size", {
   dv <- myState$dep.var
   inputs <- cppChainInputs(dv, myState, myState$cache)
-  sets <- mpleChoiceSetsCpp(inputs$edgelist, inputs$cache, inputs$resourceCovariates,
-                            inputs$resourceSet, inputs$nodeSet,
-                            cppEffectSpec(myEffects, inputs$state), "sex", TRUE, 1e9)
-  el <- myState[[dv]]$data
+  sets <- mpleChoiceSetsCpp(inputs$destinations, inputs$origins, inputs$cache,
+                            inputs$resourceCovariates, inputs$resourceSet, inputs$nodeSet,
+                            cppEffectSpec(myEffects, inputs$state), "sex", 1e9)
+  el <- cbind(myState$origin$data, myState[[dv]]$data)
   # myEffects use the resource covariate sex only
   expect_length(sets$weight, nrow(unique(cbind(el, myState$sex$data))))
   expect_equal(sum(sets$weight), nrow(el))
   expect_equal(diff(sets$start), rep(length(myState$organisations$ids), length(sets$weight)))
   # too little memory: nothing is computed
-  small <- mpleChoiceSetsCpp(inputs$edgelist, inputs$cache, inputs$resourceCovariates,
-                             inputs$resourceSet, inputs$nodeSet,
-                             cppEffectSpec(myEffects, inputs$state), "sex", TRUE, 1000)
+  small <- mpleChoiceSetsCpp(inputs$destinations, inputs$origins, inputs$cache,
+                             inputs$resourceCovariates, inputs$resourceSet, inputs$nodeSet,
+                             cppEffectSpec(myEffects, inputs$state), "sex", 1000)
   expect_true(small$tooLarge)
   expect_null(small$X)
 })
@@ -137,61 +131,49 @@ test_that("grouped choice sets give the same pseudo-likelihood as recomputing th
   # that look at the individual resources of a cell
   groupEffects <- createEffects(cppTestState) |>
     addEffect(loops_additional_origin, edge.attribute = "second_or") |>
-    addEffect(joining_similar_avoiding_dissimilar_covar_cont, edge.attribute = "second_or") |>
-    addEffect(concentration_AC_resource_covar_bin, edge.attribute = "sex", alpha = 2) |>
+    addEffect(joining_similar_avoiding_dissimilar_covar_cont, origin = "origin", edge.attribute = "second_or") |>
+    addEffect(concentration_AC_resource_covar_bin, origin = "origin", edge.attribute = "sex", alpha = 2) |>
     addEffect(in_weights_AC, alpha = 4)
   dv <- cppTestState$dep.var
   for (effects in list(myEffects, groupEffects)) {
-    for (allowLoops in c(TRUE, FALSE)) {
-      state <- cppTestState
-      if (!allowLoops) {
-        # without loops, the observed destinations must not be loops
-        el <- state[[dv]]$data
-        el[el[, 1] == el[, 2], 2] <- el[el[, 1] == el[, 2], 2] %% 17 + 1
-        state[[dv]] <- createEdgelist(el, nodeSet = state[[dv]]$nodeSet)
-        state$cache <- createInternalCache(state, resourceCovariates = names(state$cache[[dv]]$resourceNetworks))
-      }
-      grouped <- mpleObjectiveCpp(dv, state, state$cache, effects, allowLoops)
-      recomputed <- mpleObjectiveCpp(dv, state, state$cache, effects, allowLoops, memoryLimit = 0)
-      set.seed(2)
-      for (theta in list(rep(0, length(effects$name)), runif(length(effects$name), -0.5, 0.5))) {
-        g <- grouped(theta)
-        r <- recomputed(theta)
-        expect_equal(g$logPL, r$logPL, tolerance = 1e-10)
-        expect_equal(g$gradient, r$gradient, tolerance = 1e-10)
-        expect_equal(g$hessian, r$hessian, tolerance = 1e-10)
-        expect_equal(grouped(theta, derivatives = FALSE)$logPL, r$logPL, tolerance = 1e-10)
-      }
+    state <- cppTestState
+    grouped <- mpleObjectiveCpp(dv, state, state$cache, effects)
+    recomputed <- mpleObjectiveCpp(dv, state, state$cache, effects, memoryLimit = 0)
+    set.seed(2)
+    for (theta in list(rep(0, length(effects$name)), runif(length(effects$name), -0.5, 0.5))) {
+      g <- grouped(theta)
+      r <- recomputed(theta)
+      expect_equal(g$logPL, r$logPL, tolerance = 1e-10)
+      expect_equal(g$gradient, r$gradient, tolerance = 1e-10)
+      expect_equal(g$hessian, r$hessian, tolerance = 1e-10)
+      expect_equal(grouped(theta, derivatives = FALSE)$logPL, r$logPL, tolerance = 1e-10)
     }
   }
 })
 
 test_that("the MPLE is the same with grouped and recomputed choice sets", {
   dv <- myState$dep.var
-  grouped <- getMPLE(dv, myState, myState$cache, myEffects, allowLoops = TRUE)
+  grouped <- getMPLE(dv, myState, myState$cache, myEffects)
   old <- options(realm.mpleMemoryLimit = 0)
   on.exit(options(old), add = TRUE)
-  recomputed <- getMPLE(dv, myState, myState$cache, myEffects, allowLoops = TRUE)
+  recomputed <- getMPLE(dv, myState, myState$cache, myEffects)
   expect_equal(grouped, recomputed, tolerance = 1e-10)
-  expect_null(getMPLE(dv, myState, myState$cache,
-                      createEffects(myState) |> addEffect(concentration_AC, alpha = 2),
-                      allowLoops = FALSE))
 })
 
 test_that("MPLE uses the R pseudo-likelihood for effects written only in R", {
-  assign("myLoopsMPLE", function(dep.var = 1, state, cache, i, j, edge, update,
+  assign("myLoopsMPLE", function(dep.var = 1, origin, state, cache, i, j, edge, update,
                                  getTargetContribution = FALSE) {
-    if (getTargetContribution) return(cache[[dep.var]]$valuedNetwork[i, j] * (i == j))
+    if (getTargetContribution) return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * (i == j))
     if (i == j) return(update)
     0
   }, envir = globalenv())
   on.exit(rm("myLoopsMPLE", envir = globalenv()), add = TRUE)
-  effects <- createEffects(myState) |> addEffect(myLoopsMPLE)
+  effects <- createEffects(myState) |> addEffect(myLoopsMPLE, origin = "origin")
   expect_false(useCppSampler(effects, myState))
-  mple <- getMPLE(myState$dep.var, myState, myState$cache, effects, allowLoops = TRUE)
+  mple <- getMPLE(myState$dep.var, myState, myState$cache, effects)
   # same model as the loops effect alone
   expect_equal(unname(mple),
                unname(getMPLE(myState$dep.var, myState, myState$cache,
-                              createEffects(myState) |> addEffect(loops), allowLoops = TRUE)),
+                              createEffects(myState) |> addEffect(loops, origin = "origin"))),
                tolerance = 1e-8)
 })

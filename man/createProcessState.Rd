@@ -7,27 +7,32 @@
 createProcessState(elements, dependentVariable)
 }
 \arguments{
-\item{elements}{A named list of the outcome variable (edgelist), the nodesets,
-and all covariates that contain the information about the data that will be
-used in the estimation.}
+\item{elements}{A named list of the outcome variable (destinations), the
+origins, the nodesets, and all covariates that contain the information about
+the data that will be used in the estimation.}
 
-\item{dependentVariable}{The name of the outcome variable (edgelist) as
+\item{dependentVariable}{The name of the outcome variable (destinations) as
 specified under "elements". This indicates what outcome
 the researcher is interested in.}
 }
 \value{
-An object of class "processState.realm".
+An object of class "processState.realm". All elements of class
+"origin.realm" are origins; their names are stored in the element \code{origins}.
 }
 \description{
 Creates the "Process state", i.e., a realm object that stores all information
 about the data that will be used in the estimation. This includes the
-outcome variable (edgelist), the nodesets, and all covariates.
+outcome variable (the destinations), the origins, the nodesets, and all
+covariates.
 }
 \examples{
 # Create a process state out of the mobility data objects:
 # create objects (which are later combined to the process state)
-transfers <- createEdgelist(mobilityEdgelist,
-  nodeSet = c("organisations", "organisations", "people")
+transfers <- createDependent(mobilityEdgelist[, 2],
+  nodeSet = c("organisations", "people")
+)
+origin <- createOrigin(mobilityEdgelist[, 1],
+  nodeSet = c("organisations", "people")
 )
 people <- createNodeSet(1:nrow(mobilityEdgelist))
 organisations <- createNodeSet(1:length(orgRegion))
@@ -42,6 +47,7 @@ sex <- createNodeVariable(indSex, nodeSet = "people")
 # combine created objects to the process state
 myState <- createProcessState(list(
     transfers = transfers,
+    origin = origin,
     people = people,
     organisations = organisations,
     sameRegion = sameRegion,
@@ -51,6 +57,6 @@ myState <- createProcessState(list(
   dependentVariable = "transfers")
 }
 \seealso{
-\code{\link[=createEdgelist]{createEdgelist()}}, \code{\link[=createNodeSet]{createNodeSet()}},
+\code{\link[=createDependent]{createDependent()}}, \code{\link[=createOrigin]{createOrigin()}}, \code{\link[=createNodeSet]{createNodeSet()}},
 \code{\link[=createNodeVariable]{createNodeVariable()}}, \code{\link[=createNetwork]{createNetwork()}}
 }

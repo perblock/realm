@@ -8,8 +8,9 @@ realmDataCreate(..., fixedEffectDummies = FALSE)
 }
 \arguments{
 \item{...}{The realm objects to be included in the process State.
-This must include exactly one edgelist (dependent variable) and the
-two nodesets associated with the edgelist.
+This must include exactly one dependent variable (destinations, see
+\code{\link[=createDependent]{createDependent()}}), at least one origin (see \code{\link[=createOrigin]{createOrigin()}}), and the
+nodesets associated with them.
 Further allowed elements are (monadic or dyadic) covariates of locations and people}
 
 \item{fixedEffectDummies}{Add dummy variable for each location (minus the first)
@@ -25,12 +26,15 @@ An object of class "processState.realm".
 A function to create a realm process state, i.e.,
 a realm object that stores all information
 about the data that will be used in the estimation. This includes the
-outcome variable (edgelist), the nodesets, and all covariates.
+outcome variable (destinations), the origins, the nodesets, and all covariates.
 }
 \examples{
 # create objects (which are later combined to the process state)
-transfers <- createEdgelist(mobilityEdgelist,
-  nodeSet = c("organisations", "organisations", "people")
+transfers <- createDependent(mobilityEdgelist[, 2],
+  nodeSet = c("organisations", "people")
+)
+origin <- createOrigin(mobilityEdgelist[, 1],
+  nodeSet = c("organisations", "people")
 )
 people <- createNodeSet(1:nrow(mobilityEdgelist))
 organisations <- createNodeSet(1:length(orgRegion))
@@ -42,6 +46,6 @@ region <- createNodeVariable(orgRegion, nodeSet = "organisations")
 size <- createNodeVariable(orgSize, nodeSet = "organisations", addSim = TRUE)
 sex <- createNodeVariable(indSex, nodeSet = "people")
 
-realmDataCreate(transfers, people, organisations, 
+realmDataCreate(transfers, origin, people, organisations, 
                 sameRegion, region, size, sex)
 }

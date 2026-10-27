@@ -30,7 +30,7 @@ autoCorrelationTest <- function(ans) {
   means <- c()
   for (i in 1:nSims) {
     means[i] <-
-      mean(ans$deps[[i]]$data[, 2] == ans$deps[[(i + 1)]]$data[, 2])
+      mean(ans$deps[[i]]$data == ans$deps[[(i + 1)]]$data)
   }
 
   mean(means)
@@ -138,24 +138,25 @@ getMultinomialStatistics <-
     statsVec <- list()
     
     # get number of options where the resource can go
-    actors1 <- state[[dep.var]]$nodeSet[1]
+    actors1 <- destinationNodeSet(state)
     nActors1 <- length(state[[actors1]]$ids)
+    origins <- effectOrigins(effects)
     
     # loop through all resources
-    for (number in 1:nrow(state[[dep.var]]$data)) {
-      transferUnderAnalysis <- state[[dep.var]]$data[number, ]
+    for (number in seq_along(state[[dep.var]]$data)) {
+      destination <- state[[dep.var]]$data[number]
+      # the origin of the resource for each effect
+      senders <- effectSenders(state, origins, number)
       
       # get a new cache without the transfer under analysis
       
       reducedCache <- cache
       reducedCache[[dep.var]] <-
         updateWeightedCache(
-          cache = reducedCache[[dep.var]],
+          reducedCache[[dep.var]],
+          edge = number,
+          receiver = destination,
           state = state,
-          resourceID = number,
-          dep.var = dep.var,
-          sender = transferUnderAnalysis[1],
-          receiver = transferUnderAnalysis[2],
           update = -1
         )
       
@@ -166,32 +167,28 @@ getMultinomialStatistics <-
       
       for (target in 1:nActors1) {
         newCache <- reducedCache
-        # newCache[[dep.var]] <- updateWeightedCache(cache = newCache[[dep.var]],
-        #                                            sender = transferUnderAnalysis[1],
-        #                                            receiver = target,
-        #                                            update = 1)
         
         # create a state that would be with the transfer in that place
         newState <- state
-        newState[[dep.var]]$data[number, ][2] <- target
+        newState[[dep.var]]$data[number] <- target
         
         stats[target, 4:(length(effects$effectFormulas) + 3)] <-
-          unlist(lapply(effects$effectFormulas, function(f) {
-            f(
+          vapply(seq_along(effects$effectFormulas), function(k) {
+            effects$effectFormulas[[k]](
               dep.var = dep.var,
               state = newState,
               cache = newCache,
-              i = transferUnderAnalysis[1],
+              i = senders[k],
               j = target,
               edge = number,
               update = 1
             )
-          }))
+          }, numeric(1))
       }
       
       stats[, 1] <- number
       stats[, 2] <- 1:nActors1
-      stats[, 3] <- 1:nActors1 == transferUnderAnalysis[2]
+      stats[, 3] <- 1:nActors1 == destination
       
       statsVec[[number]] <- stats
     }
@@ -222,6 +219,8 @@ getMultinomialStatistics <-
 #' In `plot`, the levels to plot, as positions in the vector of values returned
 #' by `gofMobilityNetwork`; if NULL, all are plotted.
 #' @param simulations outdated parameter, no need to specify
+#' @param ... Further arguments of the gofFunction, e.g. the origin for
+#' [getTieWeights()].
 #'
 #' @return The function `gofMobilityNetwork` returns a list containing 
 #' (1) the observed values of the auxiliary statistics and
@@ -246,13 +245,15 @@ getMultinomialStatistics <-
 #' 
 #' myGofTieWeight <- gofMobilityNetwork(ans = myResDN, 
 #'                                      gofFunction = getTieWeights, 
-#'                                      lvls = 1:30)
+#'                                      lvls = 1:30,
+#'                                      origin = "origin")
 #' }
 gofMobilityNetwork <-
   function(ans,
            gofFunction,
            lvls = NULL,
-           simulations = NULL) {
+           simulations = NULL,
+           ...) {
     dep.var <- ans$state$dep.var
     
     if(!is.null(simulations)){
@@ -273,7 +274,7 @@ gofMobilityNetwork <-
     }
     allCaches <- list()
     allCaches[[1]] <- ans$cache
-    resCovsInCache <- names(ans$cache[[dep.var]]$resourceNetworks)
+    resCovsInCache <- names(ans$cache[[dep.var]]$destinations$resourceInflows)
     for (i in 2:(length(ans$deps) + 1)) {
       allCaches[[i]] <- createInternalCache(allStates[[i]], resourceCovariates = resCovsInCache)
     }
@@ -284,7 +285,8 @@ gofMobilityNetwork <-
           state = allStates[[i]],
           cache = allCaches[[i]],
           dep.var = dep.var,
-          lvls = lvls
+          lvls = lvls,
+          ...
         )
       })
     # without lvls, the gof functions return as many levels as each network
@@ -478,44 +480,52 @@ print.effectsList.realm <- function(x, ...) {
 print.processState.realm <- function(x, ...) {
   
   dep.var <- x$dep.var
-  nodesets <- x[[dep.var]]$nodeSet
-  covars <- names(x)[!(names(x) %in% c(dep.var, nodesets, "dep.var", "cache"))]
+  destinations <- destinationNodeSet(x)
+  resources <- resourceNodeSet(x)
+  covars <- names(x)[!(names(x) %in% nonCovariates(x))]
 
   cat(paste("dependent variable:", dep.var, "with",
-            length(x[[nodesets[3]]]$ids), nodesets[3], "mobile between",
-            length(x[[nodesets[1]]]$ids), nodesets[1]), "\n")
+            length(x[[resources]]$ids), resources, "mobile to",
+            length(x[[destinations]]$ids), destinations), "\n")
+  for (o in x$origins) {
+    originSet <- x[[o]]$nodeSet[1]
+    cat(paste("origin:", o, "with", length(x[[originSet]]$ids), originSet), "\n")
+  }
   cat("\n")
 
-  # covariates of nodeset 1
+  # the covariates of each nodeset: destinations, other origin nodesets, resources
+  originSets <- unique(vapply(x$origins, function(o) x[[o]]$nodeSet[1], character(1)))
+  for (nodeset in unique(c(destinations, originSets, resources))) {
+    printCovariates(x, covars, nodeset)
+    if (nodeset != resources) {
+      cat("\n")
+    }
+  }
+}
+
+# printCovariates
+# prints a table of the covariates of one nodeset (for print.processState.realm)
+printCovariates <- function(x, covars, nodeset) {
   df1 <- as.data.frame(matrix(nrow = 0, ncol = 3))
   colnames(df1) <- c("cov. name", "range", "mean")
 
   # fill table
-  if(length(covars) > 0){
-    for (i in 1:length(covars)) {
-      
-      if (nodesets[1] %in% x[[covars[i]]]$nodeSet) {
-        
-        df1[nrow(df1) + 1, ]$'cov. name' <- covars[i]
-        df1[nrow(df1), ]$range <-
-          paste0(round(min(x[[covars[i]]]$data, na.rm = TRUE), digits = 2), "-",
-                 round(max(x[[covars[i]]]$data, na.rm = TRUE), digits = 2))
-        df1[nrow(df1), ]$mean <- round(mean(x[[covars[i]]]$data, na.rm = TRUE),
-                                       digits = 2)
-      }
-    }
-
-    # if there are covariates for this nodeset, assign rownames
-    if (nrow(df1) > 0) {
-      rownames(df1) <- c(1:nrow(df1))
+  for (covar in covars) {
+    if (nodeset %in% x[[covar]]$nodeSet) {
+      df1[nrow(df1) + 1, ]$'cov. name' <- covar
+      df1[nrow(df1), ]$range <-
+        paste0(round(min(x[[covar]]$data, na.rm = TRUE), digits = 2), "-",
+               round(max(x[[covar]]$data, na.rm = TRUE), digits = 2))
+      df1[nrow(df1), ]$mean <- round(mean(x[[covar]]$data, na.rm = TRUE),
+                                     digits = 2)
     }
   }
-  
-  cat(paste("covariates of", nodesets[1]), "\n")
-  
+
+  cat(paste("covariates of", nodeset), "\n")
+
   # if there are covariates for this nodeset, print table
   if (nrow(df1) > 0) {
-    
+    rownames(df1) <- c(1:nrow(df1))
     names(df1)[1] <- format(names(df1)[1], 
                             width = max(nchar(names(df1[1])), max(nchar(df1[,1]))),
                             justify = "left")
@@ -528,58 +538,8 @@ print.processState.realm <- function(x, ...) {
     df1[,2:3] <- format(df1[,2:3], justify = "centre")
     df1[,1] <- format(df1[,1], justify = "left")
     print(df1, row.names = FALSE)
-    
   } else { # if there are no covariates for the resp. nodeset
-    cat("no covariates available for nodeset", nodesets[1], "\n")
-  }
-  
-  cat("\n")
-
-  # covariates of nodeset 2
-  df2 <- as.data.frame(matrix(nrow = 0, ncol = 3))
-  colnames(df2) <- c("cov. name", "range", "mean")
-  # fill table
-  if(length(covars) > 0){
-    for (i in 1:length(covars)) {
-      
-      if (nodesets[3] %in% x[[covars[i]]]$nodeSet) {
-        
-        df2[nrow(df2) + 1, ]$'cov. name' <- covars[i]
-        df2[nrow(df2), ]$range <-
-          paste0(round(min(x[[covars[i]]]$data, na.rm = TRUE), digits = 2), "-",
-                 round(max(x[[covars[i]]]$data, na.rm = TRUE), digits = 2))
-        df2[nrow(df2), ]$mean <- round(mean(x[[covars[i]]]$data, na.rm = TRUE),
-                                       digits = 2)
-      }
-    }
-    
-    # if there are covariates for this nodeset, assign rownames
-    if (nrow(df2) > 0) {
-      rownames(df2) <- c(1:nrow(df2))
-    }
-  }
-
-  cat(paste("covariates of", nodesets[3]), "\n")
-  
-  # if there are covariates for this nodeset, print table
-  if (nrow(df2) > 0) {
-    
-    names(df2)[1] <- format(names(df2)[1], 
-                            width = max(nchar(names(df2[1])), max(nchar(df2[,1]))),
-                            justify = "left")
-    names(df2)[2] <- format(names(df2)[2], 
-                            width = max(nchar(names(df2[2])), max(nchar(df2[,2]))),
-                            justify = "centre")
-    names(df2)[3] <- format(names(df2)[3], 
-                            width = max(nchar(names(df2[3])), max(nchar(df2[,3]))),
-                            justify = "centre")
-    
-    df2[,2:3] <- format(df2[,2:3], justify = "centre")
-    df2[,1] <- format(df2[,1], justify = "left")
-    print(df2, row.names = FALSE)
-    
-  }  else { # if there are no covariates for the resp. nodeset
-    cat("no covariates available for nodeset", nodesets[3], "\n")
+    cat("no covariates available for nodeset", nodeset, "\n")
   }
 }
 

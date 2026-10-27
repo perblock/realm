@@ -6,6 +6,8 @@
 #' locations that are the destination of many others from their origin?
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -17,12 +19,12 @@
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_basic <- function(dep.var = 1, state, cache, i, j, edge, update, getTargetContribution = FALSE){
+concentration_basic <- function(dep.var = 1, origin, state, cache, i, j, edge, update, getTargetContribution = FALSE){
   if(getTargetContribution){
-    return( (cache[[dep.var]]$valuedNetwork[i, j])^2 )
+    return( (cache[[dep.var]][[origin]]$valuedNetwork[i, j])^2 )
   } else {
-    v <- (cache[[dep.var]]$valuedNetwork[i, j] + update)^2 - 
-      (cache[[dep.var]]$valuedNetwork[i, j])^2
+    v <- (cache[[dep.var]][[origin]]$valuedNetwork[i, j] + update)^2 - 
+      (cache[[dep.var]][[origin]]$valuedNetwork[i, j])^2
     return(v)
   }
 }
@@ -32,6 +34,8 @@ concentration_basic <- function(dep.var = 1, state, cache, i, j, edge, update, g
 #' Is there a bandwagon effect in mobility following the most common path?
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -43,20 +47,20 @@ concentration_basic <- function(dep.var = 1, state, cache, i, j, edge, update, g
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_max <- function(dep.var = 1, state, cache, i, j, edge, update, getTargetContribution = FALSE){
+concentration_max <- function(dep.var = 1, origin, state, cache, i, j, edge, update, getTargetContribution = FALSE){
   if(getTargetContribution){
     # each tie contributes the nth proportion of the row.max
-    return( max(cache[[dep.var]]$valuedNetwork[i, ]) / 
-              (dim(cache[[dep.var]]$valuedNetwork)[1]) )
+    return( max(cache[[dep.var]][[origin]]$valuedNetwork[i, ]) / 
+              (dim(cache[[dep.var]][[origin]]$valuedNetwork)[1]) )
   } else {
-    v <- (cache[[dep.var]]$valuedNetwork[i, j])
+    v <- (cache[[dep.var]][[origin]]$valuedNetwork[i, j])
     if(update == 1){
-      if(max(cache[[dep.var]]$valuedNetwork[i, ]) == v){
+      if(max(cache[[dep.var]][[origin]]$valuedNetwork[i, ]) == v){
         return(update)
       } 
     }
     if(update == -1){
-      if(v > sort(cache[[dep.var]]$valuedNetwork[i, ], decreasing = T)[2]){
+      if(v > sort(cache[[dep.var]][[origin]]$valuedNetwork[i, ], decreasing = T)[2]){
         return(update)
       }
     }
@@ -70,6 +74,8 @@ concentration_max <- function(dep.var = 1, state, cache, i, j, edge, update, get
 #' locations that are the destination of many others from their origin?
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -81,12 +87,12 @@ concentration_max <- function(dep.var = 1, state, cache, i, j, edge, update, get
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_basic_cube <- function(dep.var = 1, state, cache, i, j, edge, update, getTargetContribution = FALSE){
+concentration_basic_cube <- function(dep.var = 1, origin, state, cache, i, j, edge, update, getTargetContribution = FALSE){
   if(getTargetContribution){
-    return( (cache[[dep.var]]$valuedNetwork[i, j])^3 )
+    return( (cache[[dep.var]][[origin]]$valuedNetwork[i, j])^3 )
   } else {
-    v <- (cache[[dep.var]]$valuedNetwork[i, j] + update)^3 - 
-      (cache[[dep.var]]$valuedNetwork[i, j])^3
+    v <- (cache[[dep.var]][[origin]]$valuedNetwork[i, j] + update)^3 - 
+      (cache[[dep.var]][[origin]]$valuedNetwork[i, j])^3
     return(v)
   }
 }
@@ -102,6 +108,8 @@ concentration_basic_cube <- function(dep.var = 1, state, cache, i, j, edge, upda
 #' individuals.
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -114,11 +122,11 @@ concentration_basic_cube <- function(dep.var = 1, state, cache, i, j, edge, upda
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_AC <- function(dep.var = 1, state, cache, i, j, edge, update, 
+concentration_AC <- function(dep.var = 1, origin, state, cache, i, j, edge, update, 
                              getTargetContribution = FALSE, alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_AC function must be 1 or larger")
   
-  if(i == j) return(0)
+  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -138,7 +146,7 @@ concentration_AC <- function(dep.var = 1, state, cache, i, j, edge, update,
       return(contr)
     }
     
-    nResources <- cache[[dep.var]]$valuedNetwork[i, j]
+    nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
     
     return(g_cum(y = nResources, a = alpha))
   }
@@ -161,7 +169,7 @@ concentration_AC <- function(dep.var = 1, state, cache, i, j, edge, update,
     return(contr)
   }
   
-  tie_val <- cache[[dep.var]]$valuedNetwork[i, j]
+  tie_val <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
 
   if(update < 0){
     return(update * g_mar(y = (tie_val + update), a = alpha))
@@ -183,6 +191,8 @@ concentration_AC <- function(dep.var = 1, state, cache, i, j, edge, update,
 #' individuals.
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -195,11 +205,11 @@ concentration_AC <- function(dep.var = 1, state, cache, i, j, edge, update,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_GW <- function(dep.var = 1, state, cache, i, j, edge, update, 
+concentration_GW <- function(dep.var = 1, origin, state, cache, i, j, edge, update, 
                              getTargetContribution = FALSE, alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_GW function must be 1 or larger")
   
-  if(i == j) return(0)
+  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -211,7 +221,7 @@ concentration_GW <- function(dep.var = 1, state, cache, i, j, edge, update,
       contr - y
     }
     
-    nResources <- cache[[dep.var]]$valuedNetwork[i, j]
+    nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
     
     return(g_cum(y = nResources, a = alpha))
   }
@@ -226,7 +236,7 @@ concentration_GW <- function(dep.var = 1, state, cache, i, j, edge, update,
     contr - 1
   }
   
-  tie_val <- cache[[dep.var]]$valuedNetwork[i, j]
+  tie_val <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
   
   if(update < 0){
     return(update * g_mar(y = (tie_val + update), a = alpha))
@@ -244,6 +254,8 @@ concentration_GW <- function(dep.var = 1, state, cache, i, j, edge, update,
 #' in their decision to move?
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param resource.attribute.index 
 #' @param cache 
@@ -257,7 +269,7 @@ concentration_GW <- function(dep.var = 1, state, cache, i, j, edge, update,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_AC_resource_covar_bin <- function(dep.var = 1, 
+concentration_AC_resource_covar_bin <- function(dep.var = 1, origin, 
                                                 state,
                                                 resource.attribute.index,
                                                 cache, i, j, 
@@ -267,7 +279,7 @@ concentration_AC_resource_covar_bin <- function(dep.var = 1,
                                                 alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_AC_resource_covar_bin function must be 1 or larger")
   
-  if(i == j) return(0)
+  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -287,7 +299,7 @@ concentration_AC_resource_covar_bin <- function(dep.var = 1,
       return(contr)
     }
     
-    nResources <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
+    nResources <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
     
     return(g_cum(y = nResources, a = alpha))
   }
@@ -316,7 +328,7 @@ concentration_AC_resource_covar_bin <- function(dep.var = 1,
     return(contr)
   }
   
-  tie_val <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
+  tie_val <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
   
   if(update < 0){
     return(update * g_mar(y = (tie_val + update), a = alpha))
@@ -333,6 +345,8 @@ concentration_AC_resource_covar_bin <- function(dep.var = 1,
 #' in their decision to move?
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param resource.attribute.index 
 #' @param cache 
@@ -346,7 +360,7 @@ concentration_AC_resource_covar_bin <- function(dep.var = 1,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_GW_resource_covar_bin <- function(dep.var = 1, 
+concentration_GW_resource_covar_bin <- function(dep.var = 1, origin, 
                                                 state,
                                                 resource.attribute.index,
                                                 cache, i, j, 
@@ -356,7 +370,7 @@ concentration_GW_resource_covar_bin <- function(dep.var = 1,
                                                 alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_GW_resource_covar_bin function must be 1 or larger")
   
-  if(i == j) return(0)
+  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -368,7 +382,7 @@ concentration_GW_resource_covar_bin <- function(dep.var = 1,
       contr - y
     }
     
-    nResources <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
+    nResources <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
     
     return(g_cum(y = nResources, a = alpha))
   }
@@ -389,7 +403,7 @@ concentration_GW_resource_covar_bin <- function(dep.var = 1,
     contr - 1
   }
   
-  tie_val <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
+  tie_val <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
   
   if(update < 0){
     return(update * g_mar(y = (tie_val + update), a = alpha))
@@ -408,6 +422,8 @@ concentration_GW_resource_covar_bin <- function(dep.var = 1,
 #' in the same region?
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -421,7 +437,7 @@ concentration_GW_resource_covar_bin <- function(dep.var = 1,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_AC_dyad_covar <- function(dep.var = 1, attribute.index, state, cache, i, j, edge, update, 
+concentration_AC_dyad_covar <- function(dep.var = 1, origin, attribute.index, state, cache, i, j, edge, update, 
                                             getTargetContribution = FALSE, alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_AC_dyad_covar function must be 1 or larger")
   # if(!all(state[[attribute.index]]$data == t(state[[attribute.index]]$data))) stop("attribute.index in concentration_AC_dyad_covar_bin function must be symmetric")
@@ -429,7 +445,7 @@ concentration_AC_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
   if(dim(state[[attribute.index]]$data)[1] != dim(state[[attribute.index]]$data)[2]) stop("attribute.index in concentration_AC_dyad_covar_bin function must be a square matrix")
   if(length(dim(state[[attribute.index]]$data)) != 2) stop("attribute.index in concentration_AC_dyad_covar_bin function must be a square matrix")
   
-  if(i == j) return(0)
+  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -449,7 +465,7 @@ concentration_AC_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
       return(contr)
     }
     
-    nResources <- cache[[dep.var]]$valuedNetwork[i, j] 
+    nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j] 
     
     return(g_cum(y = nResources, a = alpha) * state[[attribute.index]]$data[i, j])
   }
@@ -474,7 +490,7 @@ concentration_AC_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
     return(contr)
   }
   
-  tie_val <- cache[[dep.var]]$valuedNetwork[i, j] 
+  tie_val <- cache[[dep.var]][[origin]]$valuedNetwork[i, j] 
   
   if(update < 0){
     return(update * g_mar(y = (tie_val + update), a = alpha) * state[[attribute.index]]$data[i, j])
@@ -493,6 +509,8 @@ concentration_AC_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
 #' in the same region?
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -506,7 +524,7 @@ concentration_AC_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_GW_dyad_covar <- function(dep.var = 1, attribute.index, state, cache, i, j, edge, update, 
+concentration_GW_dyad_covar <- function(dep.var = 1, origin, attribute.index, state, cache, i, j, edge, update, 
                                         getTargetContribution = FALSE, alpha = 2){
   if(alpha < 1) stop("alpha parameter in concentration_GW function must be 1 or larger")
   # if(!all(state[[attribute.index]]$data == t(state[[attribute.index]]$data))) stop("attribute.index in concentration_GW_dyad_covar_bin function must be symmetric")
@@ -514,7 +532,7 @@ concentration_GW_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
   if(dim(state[[attribute.index]]$data)[1] != dim(state[[attribute.index]]$data)[2]) stop("attribute.index in concentration_GW_dyad_covar_bin function must be a square matrix")
   if(length(dim(state[[attribute.index]]$data)) != 2) stop("attribute.index in concentration_GW_dyad_covar_bin function must be a square matrix")
   
-  if(i == j) return(0)
+  if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) return(0)
   
   if(getTargetContribution){
     
@@ -526,7 +544,7 @@ concentration_GW_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
       contr - y
     }
     
-    nResources <- cache[[dep.var]]$valuedNetwork[i, j] 
+    nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j] 
     
     return(g_cum(y = nResources, a = alpha) * state[[attribute.index]]$data[i, j])
   }
@@ -543,7 +561,7 @@ concentration_GW_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
     contr - 1
   }
   
-  tie_val <- cache[[dep.var]]$valuedNetwork[i, j] 
+  tie_val <- cache[[dep.var]][[origin]]$valuedNetwork[i, j] 
   
   if(update < 0){
     return(update * g_mar(y = (tie_val + update), a = alpha) * state[[attribute.index]]$data[i, j])
@@ -565,6 +583,8 @@ concentration_GW_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
 #' the proportion of individuals from its origin going on the same tie as him/her.
 #'
 #' @param dep.var
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state
 #' @param cache
 #' @param i
@@ -576,7 +596,7 @@ concentration_GW_dyad_covar <- function(dep.var = 1, attribute.index, state, cac
 #' @return Returns the change statistic or target statistic of the effect for
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_prop <- function(dep.var = 1, state, cache, i, j, edge, update,
+concentration_prop <- function(dep.var = 1, origin, state, cache, i, j, edge, update,
                                getTargetContribution = FALSE){
   
   ### contribution of all ties from one origin; empty origins contribute 0
@@ -588,7 +608,7 @@ concentration_prop <- function(dep.var = 1, state, cache, i, j, edge, update,
     return(sum(row^2) / total)
   }
   
-  row <- cache[[dep.var]]$valuedNetwork[i, ]
+  row <- cache[[dep.var]][[origin]]$valuedNetwork[i, ]
 
   ### calculate target statistic
   if(getTargetContribution){
@@ -622,6 +642,8 @@ concentration_prop <- function(dep.var = 1, state, cache, i, j, edge, update,
 #' more individuals. It's a similar logic to the previous AC statistics.
 #'  
 #' @param dep.var
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state
 #' @param cache
 #' @param i
@@ -634,7 +656,7 @@ concentration_prop <- function(dep.var = 1, state, cache, i, j, edge, update,
 #' @return Returns the change statistic or target statistic of the effect for
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_prop_AC <- function(dep.var = 1, state, cache, i, j, edge, update,
+concentration_prop_AC <- function(dep.var = 1, origin, state, cache, i, j, edge, update,
                                getTargetContribution = FALSE, alpha = 2){
   
   if(alpha < 1) stop("alpha parameter in concentration_prop_AC function must be 1 or larger")
@@ -652,7 +674,7 @@ concentration_prop_AC <- function(dep.var = 1, state, cache, i, j, edge, update,
     return(sum(row * g(k = row / total, a = alpha)))
   }
   
-  row <- cache[[dep.var]]$valuedNetwork[i, ]
+  row <- cache[[dep.var]][[origin]]$valuedNetwork[i, ]
   
   ### calculate target statistic
   if(getTargetContribution){
@@ -680,6 +702,8 @@ concentration_prop_AC <- function(dep.var = 1, state, cache, i, j, edge, update,
 #' locations that are the destination of many others from their origin?
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -691,12 +715,12 @@ concentration_prop_AC <- function(dep.var = 1, state, cache, i, j, edge, update,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_basic_squared <- function(dep.var = 1, state, cache, i, j, edge, update, getTargetContribution = FALSE){
+concentration_basic_squared <- function(dep.var = 1, origin, state, cache, i, j, edge, update, getTargetContribution = FALSE){
   if(getTargetContribution){
-    return( sum(cache[[dep.var]]$valuedNetwork[i,j]^2 * 
-                  cache[[dep.var]]$valuedNetwork[i,]^2) )
+    return( sum(cache[[dep.var]][[origin]]$valuedNetwork[i,j]^2 * 
+                  cache[[dep.var]][[origin]]$valuedNetwork[i,]^2) )
   } else {
-    previous_rows <- cache[[dep.var]]$valuedNetwork[i,]
+    previous_rows <- cache[[dep.var]][[origin]]$valuedNetwork[i,]
     new_rows <- previous_rows
     new_rows[j] <- new_rows[j] + update
     v <- (sum(new_rows^2))^2 - (sum(previous_rows^2))^2
@@ -714,6 +738,8 @@ concentration_basic_squared <- function(dep.var = 1, state, cache, i, j, edge, u
 #' (number of resources - 1) zero.
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -725,20 +751,20 @@ concentration_basic_squared <- function(dep.var = 1, state, cache, i, j, edge, u
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_norm <- function(dep.var = 1, state, cache, i, j, edge, update, getTargetContribution = FALSE){
+concentration_norm <- function(dep.var = 1, origin, state, cache, i, j, edge, update, getTargetContribution = FALSE){
   if(getTargetContribution){
-    return( cache[[dep.var]]$valuedNetwork[i,j]^2 / 
-              (sum(cache[[dep.var]]$valuedNetwork[i,]) - 1) )
+    return( cache[[dep.var]][[origin]]$valuedNetwork[i,j]^2 / 
+              (sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]) - 1) )
   } else {
     if(update == -1){
-      cont <- ((cache[[dep.var]]$valuedNetwork[i,j]-1)^2 -
-               cache[[dep.var]]$valuedNetwork[i,j]^2 ) /
-        (sum(cache[[dep.var]]$valuedNetwork[i,]) - 1)
+      cont <- ((cache[[dep.var]][[origin]]$valuedNetwork[i,j]-1)^2 -
+               cache[[dep.var]][[origin]]$valuedNetwork[i,j]^2 ) /
+        (sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]) - 1)
     }
     if(update == 1){
-      cont <- ((cache[[dep.var]]$valuedNetwork[i,j]+1)^2 -
-                 cache[[dep.var]]$valuedNetwork[i,j]^2 ) /
-        sum(cache[[dep.var]]$valuedNetwork[i,])
+      cont <- ((cache[[dep.var]][[origin]]$valuedNetwork[i,j]+1)^2 -
+                 cache[[dep.var]][[origin]]$valuedNetwork[i,j]^2 ) /
+        sum(cache[[dep.var]][[origin]]$valuedNetwork[i,])
     }
     return(cont)
   }
@@ -754,6 +780,8 @@ concentration_norm <- function(dep.var = 1, state, cache, i, j, edge, update, ge
 #' (number of resources - 1) zero.
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -765,22 +793,22 @@ concentration_norm <- function(dep.var = 1, state, cache, i, j, edge, update, ge
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_norm_squared <- function(dep.var = 1, state, cache, i, j, edge, update, getTargetContribution = FALSE){
+concentration_norm_squared <- function(dep.var = 1, origin, state, cache, i, j, edge, update, getTargetContribution = FALSE){
   if(getTargetContribution){
-    return( sum(cache[[dep.var]]$valuedNetwork[i,j]^2 * cache[[dep.var]]$valuedNetwork[i,]^2 / 
-            (sum(cache[[dep.var]]$valuedNetwork[i,]) - 1)^2 ))
+    return( sum(cache[[dep.var]][[origin]]$valuedNetwork[i,j]^2 * cache[[dep.var]][[origin]]$valuedNetwork[i,]^2 / 
+            (sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]) - 1)^2 ))
   } else {
-    previous_rows <- cache[[dep.var]]$valuedNetwork[i,]
+    previous_rows <- cache[[dep.var]][[origin]]$valuedNetwork[i,]
     new_rows <- previous_rows
     if(update == -1){
       new_rows[j] <- new_rows[j] - 1
-      cont <- ((sum(new_rows^2 / (sum(cache[[dep.var]]$valuedNetwork[i,]) - 1)))^2 - 
-               (sum(previous_rows^2 / (sum(cache[[dep.var]]$valuedNetwork[i,]) - 1)))^2) 
+      cont <- ((sum(new_rows^2 / (sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]) - 1)))^2 - 
+               (sum(previous_rows^2 / (sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]) - 1)))^2) 
     }
     if(update == 1){
       new_rows[j] <- new_rows[j] + 1
-      cont <- ((sum(new_rows^2 / (sum(cache[[dep.var]]$valuedNetwork[i,]))))^2 - 
-               (sum(previous_rows^2 / (sum(cache[[dep.var]]$valuedNetwork[i,]))))^2) 
+      cont <- ((sum(new_rows^2 / (sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]))))^2 - 
+               (sum(previous_rows^2 / (sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]))))^2) 
     }
     return(cont)
   }
@@ -797,6 +825,8 @@ concentration_norm_squared <- function(dep.var = 1, state, cache, i, j, edge, up
 #' concentration by origin characteristic.
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -809,14 +839,14 @@ concentration_norm_squared <- function(dep.var = 1, state, cache, i, j, edge, up
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm. 
 #' @keywords internal
-concentration_prop_orig_cov <- function(dep.var = 1, attribute.index, state, cache, i, j, edge, update, 
+concentration_prop_orig_cov <- function(dep.var = 1, origin, attribute.index, state, cache, i, j, edge, update, 
                                getTargetContribution = FALSE){
   if(length(state[[attribute.index]]$nodeSet) != 1) stop("attribute in concentration_prop_orig_cov must be monadic")
   if(getTargetContribution){
-    numerator <- 2 * (cache[[dep.var]]$valuedNetwork[i, j])^2 - 
-      cache[[dep.var]]$valuedNetwork[i, j] * sum(cache[[dep.var]]$valuedNetwork[i,]) - 
-      cache[[dep.var]]$valuedNetwork[i, j]
-    denominator <- sum(cache[[dep.var]]$valuedNetwork[i,]) - 1
+    numerator <- 2 * (cache[[dep.var]][[origin]]$valuedNetwork[i, j])^2 - 
+      cache[[dep.var]][[origin]]$valuedNetwork[i, j] * sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]) - 
+      cache[[dep.var]][[origin]]$valuedNetwork[i, j]
+    denominator <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]) - 1
     if(denominator <= 0) {
       numerator <- 0
       denominator <- 1
@@ -827,12 +857,12 @@ concentration_prop_orig_cov <- function(dep.var = 1, attribute.index, state, cac
   ### calculate change statistic
   
   if(update == -1){
-    cont <- 2*(-2*cache[[dep.var]]$valuedNetwork[i, j] + 1 + sum(cache[[dep.var]]$valuedNetwork[i,]) ) /
-      (sum(cache[[dep.var]]$valuedNetwork[i,]) - 1)
+    cont <- 2*(-2*cache[[dep.var]][[origin]]$valuedNetwork[i, j] + 1 + sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]) ) /
+      (sum(cache[[dep.var]][[origin]]$valuedNetwork[i,]) - 1)
   }
   if(update == 1){
-    cont <- 2*(2*cache[[dep.var]]$valuedNetwork[i, j] - sum(cache[[dep.var]]$valuedNetwork[i,])) / 
-      sum(cache[[dep.var]]$valuedNetwork[i,])
+    cont <- 2*(2*cache[[dep.var]][[origin]]$valuedNetwork[i, j] - sum(cache[[dep.var]][[origin]]$valuedNetwork[i,])) / 
+      sum(cache[[dep.var]][[origin]]$valuedNetwork[i,])
   }
   return(state[[attribute.index]]$data[i] * cont)
 }
@@ -847,6 +877,8 @@ concentration_prop_orig_cov <- function(dep.var = 1, attribute.index, state, cac
 #' of people using it among all paths (and not the actual numbers of people on this path).
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -859,30 +891,30 @@ concentration_prop_orig_cov <- function(dep.var = 1, attribute.index, state, cac
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm.
 #' @keywords internal
-concentration_rankGW <- function(dep.var = 1, state, cache, i, j, edge, update, 
+concentration_rankGW <- function(dep.var = 1, origin, state, cache, i, j, edge, update, 
                                  getTargetContribution = FALSE, lambda = 2){
   if(lambda <= 0) stop("lambda parameter in concentration_rankGW function must be positive")
   if(getTargetContribution){
-    nRessources <- cache[[dep.var]]$valuedNetwork[i, j]
+    nRessources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
     if(nRessources == 0) return(0)
-    rank <- rank(-cache[[dep.var]]$valuedNetwork[i,])[j]
+    rank <- rank(-cache[[dep.var]][[origin]]$valuedNetwork[i,])[j]
     v <- nRessources * exp(rank*log(1 / (lambda)))
     return(v)
   }
   ### calculate change statistic
-  ranks1 <- rank(-cache[[dep.var]]$valuedNetwork[i,])
-  newnet <- cache[[dep.var]]$valuedNetwork
+  ranks1 <- rank(-cache[[dep.var]][[origin]]$valuedNetwork[i,])
+  newnet <- cache[[dep.var]][[origin]]$valuedNetwork
   newnet[i,j] <- newnet[i,j] + update
   ranks2 <- rank(-newnet[i,])
   if(ranks1[j] == ranks2[j]){
     v <- newnet[i, j] * exp(ranks2[j] * log(1 / (lambda))) -
-      cache[[dep.var]]$valuedNetwork[i, j] * exp(ranks1[j] * log(1 / (lambda)))
+      cache[[dep.var]][[origin]]$valuedNetwork[i, j] * exp(ranks1[j] * log(1 / (lambda)))
   } else {
     changedranks <- which( (ranks1-ranks2) !=0 )
     v <- 0
     for(changed in changedranks) {
       v <- v + newnet[i, changed] * exp(ranks2[changed] * log(1 / (lambda))) -
-        cache[[dep.var]]$valuedNetwork[i, changed] * exp(ranks1[changed] * log(1 / (lambda)))
+        cache[[dep.var]][[origin]]$valuedNetwork[i, changed] * exp(ranks1[changed] * log(1 / (lambda)))
     }
     return(v)
   }

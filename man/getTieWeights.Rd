@@ -4,7 +4,7 @@
 \alias{getTieWeights}
 \title{getTieWeights}
 \usage{
-getTieWeights(cache, dep.var, lvls, ...)
+getTieWeights(cache, dep.var, lvls, origin, ...)
 }
 \arguments{
 \item{cache}{Current Cache.}
@@ -15,6 +15,9 @@ getTieWeights(cache, dep.var, lvls, ...)
 number of ties with weight k - 1, i.e., level 1 counts the empty dyads.
 If NULL, all levels from 1 to the maximum tie weight + 1 are used.}
 
+\item{origin}{The name of the origin (see \code{\link[=createOrigin]{createOrigin()}}) whose ties are
+counted; passed from \code{\link[=gofMobilityNetwork]{gofMobilityNetwork()}}.}
+
 \item{...}{Additional parameters.}
 }
 \value{
@@ -22,7 +25,8 @@ The tie weight distribution of simulated networks, named by the
 tie weight each count refers to.
 }
 \description{
-Extracts the distribution of tie weights in the mobility network.
+Extracts the distribution of tie weights in the mobility network between
+the locations of an origin and the destinations.
 }
 \seealso{
 \code{\link[=gofMobilityNetwork]{gofMobilityNetwork()}}

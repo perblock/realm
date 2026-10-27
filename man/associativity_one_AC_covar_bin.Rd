@@ -6,6 +6,7 @@
 \usage{
 associativity_one_AC_covar_bin(
   dep.var = 1,
+  origin,
   resource.attribute.index,
   state,
   cache,
@@ -16,6 +17,10 @@ associativity_one_AC_covar_bin(
   getTargetContribution = FALSE,
   alpha = 2
 )
+}
+\arguments{
+\item{origin}{The name of the origin (see \code{\link[=createOrigin]{createOrigin()}}) of the
+resources.}
 }
 \value{
 Returns the change statistic or target statistic of the effect for

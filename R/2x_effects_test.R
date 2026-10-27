@@ -7,7 +7,8 @@
 #' alternative destination whether change and target statistics match.
 #'
 #' @param effectName 
-#' @param ... 
+#' @param ... Arguments of the effect, including its origin
+#' (origin = "origin") for effects that depend on one.
 #'
 #' @return A data frame containing for each person in the example data:
 #' Origin; Destination; Suggested destination; Change statistic;
@@ -19,7 +20,7 @@
 #' @keywords internal
 #' @examples
 #' \donttest{
-#' test_loop <- test_effect("loops")
+#' test_loop <- test_effect("loops", origin = "origin")
 #' }
 test_effect <- function(effectName, ...){
   docu <- data.frame(orig = 0, dest = 0, new_dest = 0, 
@@ -32,7 +33,9 @@ test_effect <- function(effectName, ...){
     if(x[4] !=1 ){
       paste("edge = ", edge, ", sug_dest = ", sug_dest, ": NO PRECISE MATCH")
     }
-    docu[edge,] <- c(lililiState[[1]]$data[edge,1], lililiState[[1]]$data[edge,2], sug_dest, x)
+    origin <- list(...)$origin
+    docu[edge,] <- c(if (is.null(origin)) NA else lililiState[[origin]]$data[edge],
+                     lililiState[[1]]$data[edge], sug_dest, x)
   }
   if(all(docu[,7] == 1)){
     print("No mis-match found")
@@ -59,80 +62,68 @@ test_effect <- function(effectName, ...){
 #'
 #' @keywords internal
 target_change_match <- function(edge, j_new, effectName, ...){
-  i_test <- lililiState[[1]]$data[edge,1]
-  j_test <- lililiState[[1]]$data[edge,2]
-  
-  count1 <- 0
-  
-  for(i in 1:17){
-    for(j in 1:17){
-      count1 <- count1 + match.fun(effectName)(dep.var = 1,
-                                               state = lililiState, 
-                                               cache = lililiCache, 
-                                               i = i, j = j, 
-                                               edge = 1,   
-                                               update = 1,
-                                               getTargetContribution = T,
-                                               ...)
+  f <- match.fun(effectName)
+  # effects without an origin depend only on the destinations: their target
+  # statistic is the sum over the destinations
+  origin <- list(...)$origin
+  i_test <- if (is.null(origin)) NA else lililiState[[origin]]$data[edge]
+  j_test <- lililiState[[1]]$data[edge]
+  target <- function(state, cache) {
+    count <- 0
+    for(i in if (is.null(origin)) NA else 1:17){
+      for(j in 1:17){
+        count <- count + f(dep.var = 1,
+                           state = state, 
+                           cache = cache, 
+                           i = i, j = j, 
+                           edge = 1,   
+                           update = 1,
+                           getTargetContribution = T,
+                           ...)
+      }
     }
+    count
   }
   
-  count1
+  count1 <- target(lililiState, lililiCache)
 
-  change <- match.fun(effectName)(dep.var = 1,
-                                  state = lililiState, 
-                                  cache = lililiCache, 
-                                  i = i_test, j = j_test, 
-                                  edge = edge, 
-                                  update = -1,
-                                  getTargetContribution = F,
-                                  ...)
+  change <- f(dep.var = 1,
+              state = lililiState, 
+              cache = lililiCache, 
+              i = i_test, j = j_test, 
+              edge = edge, 
+              update = -1,
+              getTargetContribution = F,
+              ...)
   lililiUpdtCache <- lililiCache
   lililiUpdtCache[[1]] <-
     updateWeightedCache(
       lililiCache[[1]],
-      i_test,
-      j_test,
-      resourceID = edge,
+      edge = edge,
+      receiver = j_test,
       state = lililiState,
-      dep.var = 1,
       update = -1
     )
   
-  change <- change + match.fun(effectName)(dep.var = 1,
-                                           state = lililiState, 
-                                           cache = lililiUpdtCache, 
-                                           i = i_test, j = j_new, 
-                                           edge = edge, 
-                                           update = 1,
-                                           getTargetContribution = F,
-                                           ...)
+  change <- change + f(dep.var = 1,
+                       state = lililiState, 
+                       cache = lililiUpdtCache, 
+                       i = i_test, j = j_new, 
+                       edge = edge, 
+                       update = 1,
+                       getTargetContribution = F,
+                       ...)
   
   lililiNewState <- lililiState
   
-  lililiNewState[[1]]$data[edge,2] <- j_new
+  lililiNewState[[1]]$data[edge] <- j_new
   
   # create cache
   lililiNewCache <- createInternalCache(lililiNewState, resourceCovariates = c("sex"))
   
-  count2 <- 0
-  
-  for(i in 1:17){
-    for(j in 1:17){
-      count2 <- count2 + match.fun(effectName)(dep.var = 1,
-                                               state = lililiNewState, 
-                                               cache = lililiNewCache, 
-                                               i = i, j = j, 
-                                               edge = 1, 
-                                               update = 1, 
-                                               getTargetContribution = T,
-                                               ...)
-    }
-  }
+  count2 <- target(lililiNewState, lililiNewCache)
   
   count3 <- (count1 + change)
   
   return(c(change, count1, count2, (count3 == count2), (round(count2, 8) == round(count3, 8))))
 }
-
-

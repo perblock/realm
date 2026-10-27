@@ -14,7 +14,7 @@ class Loops : public Effect {
     return 0;
   }
   double target(const Chain& ch, int i, int j) const override {
-    return ch.v(i, j) * (i == j);
+    return net(ch).v(i, j) * (i == j);
   }
 };
 
@@ -42,24 +42,20 @@ std::vector<double> attributeOf(const Rcpp::List& spec) {
   return std::vector<double>(a.begin(), a.end());
 }
 
-bool loopContributionOf(const Rcpp::List& spec) {
-  return Rcpp::as<bool>(spec["loopContribution"]);
-}
-
 // concentration_AC (R/2c_effectFunctions_concentration.R)
 class ConcentrationAC : public Effect {
   double alpha;
  public:
   explicit ConcentrationAC(double a) : alpha(a) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    double tie = ch.v(i, j);
+    if (i == j && net(ch).sameNodeSet) return 0;
+    double tie = net(ch).v(i, j);
     if (update < 0) return update * gMarAC(tie + update, alpha);
     return update * gMarAC(tie, alpha);
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    return gCumAC(ch.v(i, j), alpha);
+    if (i == j && net(ch).sameNodeSet) return 0;
+    return gCumAC(net(ch).v(i, j), alpha);
   }
 };
 
@@ -69,28 +65,25 @@ class DyadicCovariate : public Effect {
  public:
   explicit DyadicCovariate(std::vector<double> a) : attribute(std::move(a)) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    return update * attribute[ch.idx(i, j)];
+    if (i == j && net(ch).sameNodeSet) return 0;
+    return update * attribute[net(ch).idx(i, j)];
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    return ch.v(i, j) * attribute[ch.idx(i, j)];
+    if (i == j && net(ch).sameNodeSet) return 0;
+    return net(ch).v(i, j) * attribute[net(ch).idx(i, j)];
   }
 };
 
 // alter_covariate (R/2a_effectFunctions_exogenous.R)
 class AlterCovariate : public Effect {
   std::vector<double> attribute;
-  bool loopContribution;
  public:
-  AlterCovariate(std::vector<double> a, bool loops) : attribute(std::move(a)), loopContribution(loops) {}
+  explicit AlterCovariate(std::vector<double> a) : attribute(std::move(a)) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (!loopContribution && i == j) return 0;
     return attribute[j] * update;
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (!loopContribution && i == j) return 0;
-    return attribute[j] * ch.v(i, j);
+    return attribute[j] * ch.inflow[j];
   }
 };
 
@@ -98,17 +91,14 @@ class AlterCovariate : public Effect {
 class ResourceCovarToNodeCovar : public Effect {
   int resource;
   std::vector<double> attribute;
-  bool loopContribution;
  public:
-  ResourceCovarToNodeCovar(int r, std::vector<double> a, bool loops)
-    : resource(r), attribute(std::move(a)), loopContribution(loops) {}
+  ResourceCovarToNodeCovar(int r, std::vector<double> a)
+    : resource(r), attribute(std::move(a)) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (!loopContribution && i == j) return 0;
     return update * ch.resourceValues[resource][edge] * attribute[j];
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (!loopContribution && i == j) return 0;
-    return attribute[j] * ch.resourceNetworks[resource][ch.idx(i, j)];
+    return attribute[j] * ch.resourceInflows[resource][j];
   }
 };
 
@@ -123,7 +113,7 @@ class LoopsResourceCovar : public Effect {
   }
   double target(const Chain& ch, int i, int j) const override {
     if (i != j) return 0;
-    return ch.resourceNetworks[resource][ch.idx(i, j)];
+    return net(ch).resourceNetworks[resource][net(ch).idx(i, j)];
   }
 };
 
@@ -134,12 +124,12 @@ class LoopsAC : public Effect {
   explicit LoopsAC(double a) : alpha(a) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
     if (i != j) return 0;
-    double tie = ch.v(i, i);
+    double tie = net(ch).v(i, i);
     if (update < 0) return update * gMarAC(tie + update, alpha);
     return update * gMarAC(tie, alpha);
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return gCumAC(ch.v(i, i), alpha);
+    if (i == j) return gCumAC(net(ch).v(i, i), alpha);
     return 0;
   }
 };
@@ -175,12 +165,12 @@ class LoopsGW : public Effect {
   explicit LoopsGW(double a) : alpha(a) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
     if (i != j) return 0;
-    double tie = ch.v(i, i);
+    double tie = net(ch).v(i, i);
     if (update < 0) return update * gMarGW(tie + update, alpha);
     return update * gMarGW(tie, alpha);
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return gCumGW(ch.v(i, i), alpha);
+    if (i == j) return gCumGW(net(ch).v(i, i), alpha);
     return 0;
   }
 };
@@ -192,9 +182,11 @@ class LoopsGW : public Effect {
 class LoopsAdditionalOrigin : public Effect {
   int resource;
   bool onlyLoops;
+  // whether resource e counts for destination j (and, with onlyLoops, the
+  // origin location i)
   bool counts(const Chain& ch, int e, int i, int j) const {
-    return ch.sender[e] == i && ch.receiver[e] == j &&
-           ch.resourceValues[resource][e] == j + 1;
+    if (onlyLoops && net(ch).origin[e] != i) return false;
+    return ch.receiver[e] == j && ch.resourceValues[resource][e] == j + 1;
   }
  public:
   LoopsAdditionalOrigin(int r, bool loops) : resource(r), onlyLoops(loops) {}
@@ -205,15 +197,15 @@ class LoopsAdditionalOrigin : public Effect {
   double target(const Chain& ch, int i, int j) const override {
     if (onlyLoops && i != j) return 0;
     double cont = 0;
-    for (size_t e = 0; e < ch.sender.size(); ++e) cont += counts(ch, (int)e, i, j);
+    for (size_t e = 0; e < ch.receiver.size(); ++e) cont += counts(ch, (int)e, i, j);
     return cont;
   }
   // one pass over the resources instead of one per cell; the same count
   double targetTotal(const Chain& ch) const override {
     double total = 0;
-    for (size_t e = 0; e < ch.sender.size(); ++e) {
-      int i = ch.sender[e], j = ch.receiver[e];
-      if (i < 0 || (onlyLoops && i != j)) continue;
+    for (size_t e = 0; e < ch.receiver.size(); ++e) {
+      int j = ch.receiver[e];
+      if (j < 0 || (onlyLoops && net(ch).origin[e] != j)) continue;
       total += ch.resourceValues[resource][e] == j + 1;
     }
     return total;
@@ -231,7 +223,7 @@ class LoopsNodeCovar : public Effect {
   }
   double target(const Chain& ch, int i, int j) const override {
     if (i != j) return 0;
-    return ch.v(i, j) * attribute[i];
+    return net(ch).v(i, j) * attribute[i];
   }
 };
 
@@ -246,7 +238,7 @@ class LoopsResourceCovarNodeCovar : public Effect {
     return 0;
   }
   double target(const Chain& ch, int i, int j) const override {
-    return (ch.resourceNetworks[resource][ch.idx(i, j)] * (i == j)) * attribute[i];
+    return (net(ch).resourceNetworks[resource][net(ch).idx(i, j)] * (i == j)) * attribute[i];
   }
 };
 
@@ -265,8 +257,8 @@ class Concentration : public Effect {
   std::vector<double> dyad;  // DYAD: n x n covariate
   int resource;              // RESOURCE: resource covariate
   double tieValue(const Chain& ch, int i, int j) const {
-    if (weight == RESOURCE) return ch.resourceNetworks[resource][ch.idx(i, j)];
-    return ch.v(i, j);
+    if (weight == RESOURCE) return net(ch).resourceNetworks[resource][net(ch).idx(i, j)];
+    return net(ch).v(i, j);
   }
   double gMar(double y) const { return gw ? gMarGW(y, alpha) : gMarAC(y, alpha); }
   double gCum(double y) const { return gw ? gCumGW(y, alpha) : gCumAC(y, alpha); }
@@ -274,18 +266,18 @@ class Concentration : public Effect {
   Concentration(bool isGW, Weight w, double a, std::vector<double> d, int r)
     : gw(isGW), weight(w), alpha(a), dyad(std::move(d)), resource(r) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    if (weight == DYAD && dyad[ch.idx(i, j)] == 0) return 0;
+    if (i == j && net(ch).sameNodeSet) return 0;
+    if (weight == DYAD && dyad[net(ch).idx(i, j)] == 0) return 0;
     if (weight == RESOURCE && ch.resourceValues[resource][edge] == 0) return 0;
     double tie = tieValue(ch, i, j);
     double g = update < 0 ? update * gMar(tie + update) : update * gMar(tie);
-    if (weight == DYAD) return g * dyad[ch.idx(i, j)];
+    if (weight == DYAD) return g * dyad[net(ch).idx(i, j)];
     return g;
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
+    if (i == j && net(ch).sameNodeSet) return 0;
     double g = gCum(tieValue(ch, i, j));
-    if (weight == DYAD) return g * dyad[ch.idx(i, j)];
+    if (weight == DYAD) return g * dyad[net(ch).idx(i, j)];
     return g;
   }
 };
@@ -295,22 +287,16 @@ class Concentration : public Effect {
 class InWeights : public Effect {
   bool gw;
   double alpha;
-  // sum(cache$valuedNetwork[, j]) as in R (long double accumulation)
-  double inWeight(const Chain& ch, int j) const {
-    long double total = 0;
-    for (int i = 0; i < ch.n; ++i) total += ch.v(i, j);
-    return (double)total;
-  }
  public:
   InWeights(bool isGW, double a) : gw(isGW), alpha(a) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    double w = inWeight(ch, j);
+    double w = ch.inflow[j];
     double y = update < 0 ? w + update : w;
     return update * (gw ? gMarGW(y, alpha) : gMarAC(y, alpha));
   }
   double target(const Chain& ch, int i, int j) const override {
-    double w = inWeight(ch, j);
-    return (gw ? gCumGW(w, alpha) : gCumAC(w, alpha)) / ch.n;
+    double w = ch.inflow[j];
+    return gw ? gCumGW(w, alpha) : gCumAC(w, alpha);
   }
 };
 
@@ -322,10 +308,10 @@ class ConcentrationBasic : public Effect {
  public:
   explicit ConcentrationBasic(double p) : power(p) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    return rpow(ch.v(i, j) + update, power) - rpow(ch.v(i, j), power);
+    return rpow(net(ch).v(i, j) + update, power) - rpow(net(ch).v(i, j), power);
   }
   double target(const Chain& ch, int i, int j) const override {
-    return rpow(ch.v(i, j), power);
+    return rpow(net(ch).v(i, j), power);
   }
 };
 
@@ -354,7 +340,7 @@ class ConcentrationProp : public Effect {
   }
   std::vector<double> rowOf(const Chain& ch, int i) const {
     std::vector<double> row(ch.n);
-    for (int k = 0; k < ch.n; ++k) row[k] = ch.v(i, k);
+    for (int k = 0; k < ch.n; ++k) row[k] = net(ch).v(i, k);
     return row;
   }
  public:
@@ -378,11 +364,11 @@ class ConcentrationProp : public Effect {
 class ConcentrationMax : public Effect {
  public:
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    double v = ch.v(i, j);
+    double v = net(ch).v(i, j);
     // largest and second-largest value of row i (R: sort(row, decreasing = T)[2])
     double first = R_NegInf, second = R_NegInf;
     for (int k = 0; k < ch.n; ++k) {
-      double x = ch.v(i, k);
+      double x = net(ch).v(i, k);
       if (x > first) {
         second = first;
         first = x;
@@ -396,17 +382,17 @@ class ConcentrationMax : public Effect {
   }
   double target(const Chain& ch, int i, int j) const override {
     double rowMax = R_NegInf;
-    for (int k = 0; k < ch.n; ++k) rowMax = std::max(rowMax, ch.v(i, k));
+    for (int k = 0; k < ch.n; ++k) rowMax = std::max(rowMax, net(ch).v(i, k));
     return rowMax / ch.n;
   }
 };
 
 // ---- concentration effects restored from MoNAn 1.1.0
 
-// row i of the valued network
-inline std::vector<double> rowOf(const Chain& ch, int i) {
-  std::vector<double> row(ch.n);
-  for (int k = 0; k < ch.n; ++k) row[k] = ch.v(i, k);
+// row i of the valued network of an origin
+inline std::vector<double> rowOf(const OriginNet& net, int i) {
+  std::vector<double> row(net.nCol);
+  for (int k = 0; k < net.nCol; ++k) row[k] = net.v(i, k);
   return row;
 }
 
@@ -421,15 +407,15 @@ inline double sumSquares(const std::vector<double>& x, double divisor = 1) {
 class ConcentrationBasicSquared : public Effect {
  public:
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    std::vector<double> previous = rowOf(ch, i);
+    std::vector<double> previous = rowOf(net(ch), i);
     std::vector<double> next = previous;
     next[j] = next[j] + update;
     return rpow(sumSquares(next), 2) - rpow(sumSquares(previous), 2);
   }
   double target(const Chain& ch, int i, int j) const override {
-    double vij2 = rpow(ch.v(i, j), 2);
+    double vij2 = rpow(net(ch).v(i, j), 2);
     long double total = 0;
-    for (int k = 0; k < ch.n; ++k) total += vij2 * rpow(ch.v(i, k), 2);
+    for (int k = 0; k < ch.n; ++k) total += vij2 * rpow(net(ch).v(i, k), 2);
     return (double)total;
   }
 };
@@ -440,11 +426,11 @@ class ConcentrationNorm : public Effect {
  public:
   explicit ConcentrationNorm(bool sq) : squared(sq) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    std::vector<double> previous = rowOf(ch, i);
+    std::vector<double> previous = rowOf(net(ch), i);
     long double s = 0;
     for (double v : previous) s += v;
     double total = (double)s;
-    double vij = ch.v(i, j);
+    double vij = net(ch).v(i, j);
     if (!squared) {
       if (update == -1) return (rpow(vij - 1, 2) - rpow(vij, 2)) / (total - 1);
       if (update == 1) return (rpow(vij + 1, 2) - rpow(vij, 2)) / total;
@@ -463,13 +449,13 @@ class ConcentrationNorm : public Effect {
   }
   double target(const Chain& ch, int i, int j) const override {
     long double s = 0;
-    for (int k = 0; k < ch.n; ++k) s += ch.v(i, k);
+    for (int k = 0; k < ch.n; ++k) s += net(ch).v(i, k);
     double total = (double)s;
-    double vij2 = rpow(ch.v(i, j), 2);
+    double vij2 = rpow(net(ch).v(i, j), 2);
     if (!squared) return vij2 / (total - 1);
     double denominator = rpow(total - 1, 2);
     long double sum = 0;
-    for (int k = 0; k < ch.n; ++k) sum += vij2 * rpow(ch.v(i, k), 2) / denominator;
+    for (int k = 0; k < ch.n; ++k) sum += vij2 * rpow(net(ch).v(i, k), 2) / denominator;
     return (double)sum;
   }
 };
@@ -478,15 +464,15 @@ class ConcentrationNorm : public Effect {
 // weighted by an attribute of the origin)
 class ConcentrationPropOrigCov : public Effect {
   std::vector<double> attribute;
-  static double rowSumOf(const Chain& ch, int i) {
+  double rowSumOf(const Chain& ch, int i) const {
     long double s = 0;
-    for (int k = 0; k < ch.n; ++k) s += ch.v(i, k);
+    for (int k = 0; k < ch.n; ++k) s += net(ch).v(i, k);
     return (double)s;
   }
  public:
   explicit ConcentrationPropOrigCov(std::vector<double> a) : attribute(std::move(a)) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    double v = ch.v(i, j), total = rowSumOf(ch, i), cont;
+    double v = net(ch).v(i, j), total = rowSumOf(ch, i), cont;
     if (update == -1) {
       cont = 2 * (-2 * v + 1 + total) / (total - 1);
     } else if (update == 1) {
@@ -497,7 +483,7 @@ class ConcentrationPropOrigCov : public Effect {
     return attribute[i] * cont;
   }
   double target(const Chain& ch, int i, int j) const override {
-    double v = ch.v(i, j), total = rowSumOf(ch, i);
+    double v = net(ch).v(i, j), total = rowSumOf(ch, i);
     double numerator = 2 * rpow(v, 2) - v * total - v;
     double denominator = total - 1;
     if (denominator <= 0) {
@@ -531,7 +517,7 @@ class ConcentrationRankGW : public Effect {
  public:
   explicit ConcentrationRankGW(double lambda) : logWeight(std::log(1 / lambda)) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    std::vector<double> previous = rowOf(ch, i);
+    std::vector<double> previous = rowOf(net(ch), i);
     std::vector<double> next = previous;
     next[j] = next[j] + update;
     std::vector<double> r1 = ranks(previous), r2 = ranks(next);
@@ -543,9 +529,9 @@ class ConcentrationRankGW : public Effect {
     return v;
   }
   double target(const Chain& ch, int i, int j) const override {
-    double n = ch.v(i, j);
+    double n = net(ch).v(i, j);
     if (n == 0) return 0;
-    return n * w(ranks(rowOf(ch, i))[j]);
+    return n * w(ranks(rowOf(net(ch), i))[j]);
   }
 };
 
@@ -563,37 +549,24 @@ class DyadicCovariateResourceAttribute : public Effect {
  public:
   DyadicCovariateResourceAttribute(std::vector<double> d, int r) : dyad(std::move(d)), resource(r) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    return update * ch.resourceValues[resource][edge] * dyad[ch.idx(i, j)];
+    if (i == j && net(ch).sameNodeSet) return 0;
+    return update * ch.resourceValues[resource][edge] * dyad[net(ch).idx(i, j)];
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    return ch.resourceNetworks[resource][ch.idx(i, j)] * dyad[ch.idx(i, j)];
+    if (i == j && net(ch).sameNodeSet) return 0;
+    return net(ch).resourceNetworks[resource][net(ch).idx(i, j)] * dyad[net(ch).idx(i, j)];
   }
 };
-
-// sum(m[, j]) as in R (long double accumulation)
-inline double colSum(const Chain& ch, const std::vector<double>& m, int j) {
-  long double total = 0;
-  for (int i = 0; i < ch.n; ++i) total += m[ch.idx(i, j)];
-  return (double)total;
-}
-// sum(m[i, ]) as in R
-inline double rowSum(const Chain& ch, const std::vector<double>& m, int i) {
-  long double total = 0;
-  for (int j = 0; j < ch.n; ++j) total += m[ch.idx(i, j)];
-  return (double)total;
-}
 
 // in_ties_loops
 class InTiesLoops : public Effect {
  public:
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return update * (colSum(ch, ch.valued, j) - ch.v(j, j));
-    return update * ch.v(j, j);
+    if (i == j) return update * (net(ch).colSum(net(ch).valued, j) - net(ch).v(j, j));
+    return update * net(ch).v(j, j);
   }
   double target(const Chain& ch, int i, int j) const override {
-    return (ch.v(i, j) * (i == j)) * (colSum(ch, ch.valued, j) - ch.v(j, j));
+    return (net(ch).v(i, j) * (i == j)) * (net(ch).colSum(net(ch).valued, j) - net(ch).v(j, j));
   }
 };
 
@@ -601,14 +574,14 @@ class InTiesLoops : public Effect {
 class PresentRelations : public Effect {
  public:
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    if (i == j) return 0;
-    if (ch.v(i, j) == 0 && update > 0) return 1;
-    if (ch.v(i, j) == -update && update < 0) return -1;
+    if (i == j && net(ch).sameNodeSet) return 0;
+    if (net(ch).v(i, j) == 0 && update > 0) return 1;
+    if (net(ch).v(i, j) == -update && update < 0) return -1;
     return 0;
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (i == j) return 0;
-    return (ch.v(i, j) > 0) * 1;
+    if (i == j && net(ch).sameNodeSet) return 0;
+    return (net(ch).v(i, j) > 0) * 1;
   }
 };
 
@@ -619,11 +592,11 @@ class PresentRelations : public Effect {
 class InflowProportion : public Effect {
   int resource;
   bool crowdingOut;
-  double r(const Chain& ch, int i, int j) const { return ch.resourceNetworks[resource][ch.idx(i, j)]; }
+  double r(const Chain& ch, int i, int j) const { return net(ch).resourceNetworks[resource][net(ch).idx(i, j)]; }
   double propBefore(const Chain& ch, int j) const {
-    double sumV = colSum(ch, ch.valued, j);
-    if ((sumV - ch.v(j, j)) == 0) return 0.5;
-    return (colSum(ch, ch.resourceNetworks[resource], j) - r(ch, j, j)) / (sumV - ch.v(j, j));
+    double sumV = net(ch).colSum(net(ch).valued, j);
+    if ((sumV - net(ch).v(j, j)) == 0) return 0.5;
+    return (net(ch).colSum(net(ch).resourceNetworks[resource], j) - r(ch, j, j)) / (sumV - net(ch).v(j, j));
   }
  public:
   InflowProportion(int res, bool crowding) : resource(res), crowdingOut(crowding) {}
@@ -633,28 +606,28 @@ class InflowProportion : public Effect {
       if (crowdingOut && ch.resourceValues[resource][edge] == 1) return 0;
       return before * update;
     }
-    double loops = crowdingOut ? ch.v(j, j) - r(ch, j, j) : ch.v(j, j);
-    double sumV = colSum(ch, ch.valued, j);
+    double loops = crowdingOut ? net(ch).v(j, j) - r(ch, j, j) : net(ch).v(j, j);
+    double sumV = net(ch).colSum(net(ch).valued, j);
     double after;
-    if (((sumV + update) - ch.v(j, j)) == 0) {
+    if (((sumV + update) - net(ch).v(j, j)) == 0) {
       after = 0.5;
     } else {
-      after = ((colSum(ch, ch.resourceNetworks[resource], j) +
+      after = ((net(ch).colSum(net(ch).resourceNetworks[resource], j) +
                 update * ch.resourceValues[resource][edge]) - r(ch, j, j)) /
-              ((sumV + update) - ch.v(j, j));
+              ((sumV + update) - net(ch).v(j, j));
     }
     double change = after - before;
     return change * loops;
   }
   double target(const Chain& ch, int i, int j) const override {
     if (i != j) return 0;
-    double loops = crowdingOut ? ch.v(i, j) - r(ch, i, j) : ch.v(i, j);
-    double sumV = colSum(ch, ch.valued, j);
+    double loops = crowdingOut ? net(ch).v(i, j) - r(ch, i, j) : net(ch).v(i, j);
+    double sumV = net(ch).colSum(net(ch).valued, j);
     double prop;
-    if ((sumV - ch.v(i, j)) == 0) {
+    if ((sumV - net(ch).v(i, j)) == 0) {
       prop = 0.5;
     } else {
-      prop = (colSum(ch, ch.resourceNetworks[resource], j) - r(ch, i, j)) / (sumV - ch.v(i, j));
+      prop = (net(ch).colSum(net(ch).resourceNetworks[resource], j) - r(ch, i, j)) / (sumV - net(ch).v(i, j));
     }
     return loops * prop;
   }
@@ -667,12 +640,12 @@ class SimilarityBin : public Effect {
  public:
   SimilarityBin(int r, bool j) : resource(r), joining(j) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    double n = ch.v(i, j);
-    double n1 = ch.resourceNetworks[resource][ch.idx(i, j)];
+    double n = net(ch).v(i, j);
+    double n1 = net(ch).resourceNetworks[resource][net(ch).idx(i, j)];
     double attr = ch.resourceValues[resource][edge];
     if (update == -1) {
       if (n < 2) return 0;
-      double originSize = rowSum(ch, ch.valued, i);
+      double originSize = net(ch).rowSum(net(ch).valued, i);
       if (joining) {
         if (attr == 1) return (-2 * (n1 - 1) + 2 * (n - n1)) / (originSize - 1);
         return (-2 * (n - n1 - 1) + 2 * n1) / (originSize - 1);
@@ -682,7 +655,7 @@ class SimilarityBin : public Effect {
     }
     if (update == 1) {
       if (n < 1) return 0;
-      double originSize = rowSum(ch, ch.valued, i) + 1;
+      double originSize = net(ch).rowSum(net(ch).valued, i) + 1;
       if (joining) {
         if (attr == 1) return (2 * n1 - 2 * (n - n1)) / (originSize - 1);
         return (2 * (n - n1) - 2 * (n1)) / (originSize - 1);
@@ -693,10 +666,10 @@ class SimilarityBin : public Effect {
     Rcpp::stop("updates other than -1 and 1 are not supported");
   }
   double target(const Chain& ch, int i, int j) const override {
-    double n = ch.v(i, j);
+    double n = net(ch).v(i, j);
     if (n < 2) return 0;
-    double n1 = ch.resourceNetworks[resource][ch.idx(i, j)];
-    double originSize = rowSum(ch, ch.valued, i);
+    double n1 = net(ch).resourceNetworks[resource][net(ch).idx(i, j)];
+    double originSize = net(ch).rowSum(net(ch).valued, i);
     double numerator;
     if (joining) {
       numerator = n1 * (n1 - 1) + (n - n1) * (n - n1 - 1) - 2 * n1 * (n - n1);
@@ -725,46 +698,47 @@ class SimilarityCont : public Effect {
     for (size_t c = 1; c < x.size(); ++c) {
       for (size_t r = 0; r < c; ++r) numerator += term(std::abs(x[r] - x[c]));
     }
-    double denominator = rowSum(ch, ch.valued, i) - 1;
+    double denominator = net(ch).rowSum(net(ch).valued, i) - 1;
     return (double)numerator / denominator;
   }
  public:
   SimilarityCont(int r, bool j, double range) : resource(r), joining(j), attributeRange(range) {}
   double change(const Chain& ch, int i, int j, int edge, int update) const override {
-    double n = ch.v(i, j);
+    double n = net(ch).v(i, j);
     if (update == -1 && n < 2) return 0;
     if (update == 1 && n < 1) return 0;
     if (update != -1 && update != 1) Rcpp::stop("updates other than -1 and 1 are not supported");
     double attr = ch.resourceValues[resource][edge];
     long double total = 0;
-    for (size_t e = 0; e < ch.sender.size(); ++e) {
-      if (ch.sender[e] == i && ch.receiver[e] == j && (int)e != edge) {
+    for (size_t e = 0; e < ch.receiver.size(); ++e) {
+      if (net(ch).origin[e] == i && ch.receiver[e] == j && (int)e != edge) {
         total += term(std::abs(attr - ch.resourceValues[resource][e]));
       }
     }
-    double originSize = rowSum(ch, ch.valued, i) + (update == 1 ? 1 : 0);
+    double originSize = net(ch).rowSum(net(ch).valued, i) + (update == 1 ? 1 : 0);
     if (update == -1) return -(double)total / (originSize - 1);
     return (double)total / (originSize - 1);
   }
   double target(const Chain& ch, int i, int j) const override {
-    if (ch.v(i, j) < 2) return 0;
+    if (net(ch).v(i, j) < 2) return 0;
     std::vector<double> x;
-    for (size_t e = 0; e < ch.sender.size(); ++e) {
-      if (ch.sender[e] == i && ch.receiver[e] == j) x.push_back(ch.resourceValues[resource][e]);
+    for (size_t e = 0; e < ch.receiver.size(); ++e) {
+      if (net(ch).origin[e] == i && ch.receiver[e] == j) x.push_back(ch.resourceValues[resource][e]);
     }
     return tieValue(ch, i, x);
   }
   // one pass over the resources instead of one per cell; the same values
   double targetTotal(const Chain& ch) const override {
-    std::vector<std::vector<double>> byTie((size_t)ch.n * ch.n);
-    for (size_t e = 0; e < ch.sender.size(); ++e) {
-      if (ch.sender[e] < 0) continue;
-      byTie[ch.idx(ch.sender[e], ch.receiver[e])].push_back(ch.resourceValues[resource][e]);
+    const OriginNet& N = net(ch);
+    std::vector<std::vector<double>> byTie((size_t)N.nRow * ch.n);
+    for (size_t e = 0; e < ch.receiver.size(); ++e) {
+      if (ch.receiver[e] < 0) continue;
+      byTie[N.idx(N.origin[e], ch.receiver[e])].push_back(ch.resourceValues[resource][e]);
     }
     long double total = 0;
     for (int j = 0; j < ch.n; ++j) {
-      for (int i = 0; i < ch.n; ++i) {
-        total += ch.v(i, j) < 2 ? 0 : tieValue(ch, i, byTie[ch.idx(i, j)]);
+      for (int i = 0; i < N.nRow; ++i) {
+        total += net(ch).v(i, j) < 2 ? 0 : tieValue(ch, i, byTie[net(ch).idx(i, j)]);
       }
     }
     return (double)total;
@@ -773,7 +747,7 @@ class SimilarityCont : public Effect {
 
 }  // namespace
 
-std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
+std::unique_ptr<Effect> makeEffectFor(const Rcpp::List& spec, const Chain& chain) {
   std::string name = Rcpp::as<std::string>(spec["name"]);
   typedef std::unique_ptr<Effect> E;
   if (name == "loops") return E(new Loops());
@@ -782,12 +756,12 @@ std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
   }
   if (name == "dyadic_covariate") return E(new DyadicCovariate(attributeOf(spec)));
   if (name == "alter_covariate") {
-    return E(new AlterCovariate(attributeOf(spec), loopContributionOf(spec)));
+    return E(new AlterCovariate(attributeOf(spec)));
   }
   if (name == "resource_covar_to_node_covar") {
     return E(new ResourceCovarToNodeCovar(
       chain.resourceIndex(Rcpp::as<std::string>(spec["resourceAttribute"])),
-      attributeOf(spec), loopContributionOf(spec)));
+      attributeOf(spec)));
   }
   if (name == "loops_resource_covar") {
     return E(new LoopsResourceCovar(
@@ -825,8 +799,9 @@ std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
     if (name.find("dyad_covar") != std::string::npos) {
       w = Concentration::DYAD;
       dyad = attributeOf(spec);
-      if (dyad.size() != (size_t)chain.n * chain.n) {
-        Rcpp::stop("attribute.index in %s_bin function must be a square matrix", name);
+      int origin = Rcpp::as<int>(spec["origin"]);
+      if (dyad.size() != (size_t)chain.origins[origin].nRow * chain.n) {
+        Rcpp::stop("attribute.index in %s function must be a matrix of origins x destinations", name);
       }
     }
     if (name.find("resource_covar") != std::string::npos) {
@@ -894,4 +869,10 @@ std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
     return E(new SimilarityCont(r, name == "joining_similar_avoiding_dissimilar_covar_cont", hi - lo));
   }
   Rcpp::stop("effect '%s' has no C++ version", name);
+}
+
+std::unique_ptr<Effect> makeEffect(const Rcpp::List& spec, const Chain& chain) {
+  std::unique_ptr<Effect> effect = makeEffectFor(spec, chain);
+  effect->o = Rcpp::as<int>(spec["origin"]);
+  return effect;
 }

@@ -12,16 +12,10 @@
 effect_specs <- list(
   # exogenous
   alter_covariate = list(attribute.index = "size"),
-  alter_covariate_no_loops = list(.effect = "alter_covariate", attribute.index = "size",
-                                  loop.contribution = FALSE),
   dyadic_covariate = list(attribute.index = "sameRegion"),
   dyadic_covariate_resource_attribute = list(attribute.index = "sameRegion",
                                              resource.attribute.index = "sex"),
   resource_covar_to_node_covar = list(resource.attribute.index = "sex", attribute.index = "region"),
-  resource_covar_to_node_covar_loops = list(.effect = "resource_covar_to_node_covar",
-                                            resource.attribute.index = "sex",
-                                            attribute.index = "region",
-                                            loop.contribution = TRUE),
   same_covariate = list(attribute.index = "region"),
   sim_covariate = list(attribute.index = "size"),
 
@@ -106,10 +100,11 @@ for (spec_name in names(effect_specs)) {
 # regression test: moves into a loop by resources whose additional origin is
 # their origin used to fail with NA in loops_x_loops_additional_origin
 test_that("additional-origin loop effects handle moves into a loop", {
-  el <- lililiState$transfers$data
-  candidates <- which(el[, 1] != el[, 2] & lililiState$second_or$data == el[, 1])
+  dest <- lililiState$transfers$data
+  orig <- lililiState$origin$data
+  candidates <- which(orig != dest & lililiState$second_or$data == orig)
   expect_gt(length(candidates), 0)
-  loop_moves <- data.frame(edge = candidates[1:3], j_new = el[candidates[1:3], 1])
+  loop_moves <- data.frame(edge = candidates[1:3], j_new = orig[candidates[1:3]])
   for (effect in c("loops_additional_origin", "loops_x_loops_additional_origin")) {
     expect_change_matches(effect, list(resource.attribute.index = "second_or"), loop_moves)
   }

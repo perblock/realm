@@ -12,22 +12,22 @@ expect_same <- function(object, expected, ...) {
   }
 }
 
-# the C++ and R samplers give the same chain for the same seed: same edgelist,
-# cache and random number state afterwards
-compare_chains <- function(effects, parameters, n = 5000, allowLoops = TRUE,
+# the C++ and R samplers give the same chain for the same seed: same
+# destinations, cache and random number state afterwards
+compare_chains <- function(effects, parameters, n = 5000,
                            multinomial = FALSE, state = myState, seed = 42) {
   dv <- state$dep.var
   oldOptions <- options(realm.useCpp = FALSE)
   on.exit(options(oldOptions), add = TRUE)
   set.seed(seed)
   r <- simulateNSteps(dv, state, state$cache, effects, parameters,
-                      allowLoops = allowLoops, multinomialProposal = multinomial, n = n)
+                      multinomialProposal = multinomial, n = n)
   rNext <- runif(1)
   options(realm.useCpp = TRUE)
   set.seed(seed)
   cpp <- simulateChain(dv, state, state$cache, effects, parameters,
                        burnIn = n, iterations = 0, thinning = 0,
-                       allowLoops = allowLoops, multinomialProposal = multinomial)
+                       multinomialProposal = multinomial)
   cppNext <- runif(1)
 
   expect_identical(cpp$state[[dv]]$data, toListState(r$state, dv)[[dv]]$data)
@@ -36,35 +36,38 @@ compare_chains <- function(effects, parameters, n = 5000, allowLoops = TRUE,
 }
 
 # every effect of `effects` gives exactly the same change statistic and target
-# contribution in C++ as in R (up to rounding without long double, see above), for random moves including moves into and out
-# of loops
+# contribution in C++ as in R (up to rounding without long double, see above),
+# for random moves including moves into and out of loops (of the first origin)
 expect_cpp_matches_r <- function(effects, state = myState, n = 100, seed = 3) {
   dv <- state$dep.var
-  el <- state[[dv]]$data
+  dest <- state[[dv]]$data
+  orig <- state[[state$origins[1]]]$data
   nNodes <- length(state[[state[[dv]]$nodeSet[1]]]$ids)
   set.seed(seed)
-  E <- sample(nrow(el), n, TRUE)
+  E <- sample(length(dest), n, TRUE)
   J <- sample(nNodes, n, TRUE)
   loopMoves <- seq_len(max(1, n %/% 10))
-  J[loopMoves] <- el[E[loopMoves], 1]
-  fromLoops <- which(el[, 1] == el[, 2])
+  J[loopMoves] <- orig[E[loopMoves]]
+  fromLoops <- which(orig == dest)
   if (length(fromLoops) > 0) {
     E[loopMoves + length(loopMoves)] <- fromLoops[seq_along(loopMoves)]
   }
   U <- sample(c(-1, 1), n, TRUE)
+  origins <- effectOrigins(effects)
 
   for (k in seq_along(effects$name)) {
     f <- effects$effectFormulas[[k]]
     for (m in 1:n) {
+      i <- if (is.na(origins[k])) NA else state[[origins[k]]]$data[E[m]]
       expected <- c(
         change = f(dep.var = dv, state = state, cache = state$cache,
-                   i = el[E[m], 1], j = J[m], edge = E[m], update = U[m]),
+                   i = i, j = J[m], edge = E[m], update = U[m]),
         target = f(dep.var = dv, state = state, cache = state$cache,
-                   i = el[E[m], 1], j = J[m], edge = E[m], update = U[m],
+                   i = i, j = J[m], edge = E[m], update = U[m],
                    getTargetContribution = TRUE)
       )
       expect_same(
-        cppEffectValues(effects, k, state, state$cache, el[E[m], 1], J[m], E[m], U[m]),
+        cppEffectValues(effects, k, state, state$cache, i, J[m], E[m], U[m]),
         expected,
         label = paste(effects$name[k], "edge", E[m], "to", J[m], "update", U[m])
       )

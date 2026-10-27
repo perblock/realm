@@ -24,15 +24,15 @@ The predictors in the model are called “effects”.
 # create an effects object
 myEffects <- createEffectsObject(
   list(
-    list("loops"),
-    list("present_relations"),
-    list("dyadic_covariate", attribute.index = "sameRegion"),
+    list("loops", origin = "origin"),
+    list("present_relations", origin = "origin"),
+    list("dyadic_covariate", origin = "origin", attribute.index = "sameRegion"),
     list("alter_covariate", attribute.index = "size"),
     list("resource_covar_to_node_covar",
       attribute.index = "region",
       resource.attribute.index = "sex"
     ),
-    list("loops_resource_covar", resource.attribute.index = "sex")
+    list("loops_resource_covar", origin = "origin", resource.attribute.index = "sex")
   )
 )
 }

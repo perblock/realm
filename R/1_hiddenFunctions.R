@@ -8,31 +8,65 @@ binarizeNetwork <- function(network) {
 }
 
 
+# destinationNodeSet, resourceNodeSet
+# the nodesets of the dependent variable: the locations (destinations) and the
+# resources
+destinationNodeSet <- function(state, dep.var = state$dep.var) {
+  state[[dep.var]]$nodeSet[1]
+}
+resourceNodeSet <- function(state, dep.var = state$dep.var) {
+  state[[dep.var]]$nodeSet[2]
+}
+
+# nonCovariates
+# the names of the elements of a state that are not covariates
+nonCovariates <- function(state) {
+  dep.var <- state$dep.var
+  nodesets <- unique(c(state[[dep.var]]$nodeSet,
+                       unlist(lapply(state$origins, function(o) state[[o]]$nodeSet))))
+  c(dep.var, state$origins, nodesets, "dep.var", "origins", "cache")
+}
+
+
 # checkProcessState
 checkProcessState <- function(state) {
   
   # extract dependent variable
   dep.var <- state$dep.var
   
-  # make sure that dependent variable has corresponding edgelist
+  # make sure that dependent variable has a corresponding object
   if (!(dep.var %in% names(state))) {
-    stop("Dependent variable has no corresponding edgelist in the state object.")
+    stop("Dependent variable has no corresponding object in the state object.")
   }
   
-  # is edgelist of class 'edgelist.realm'?
-  if (!(inherits(state[[dep.var]], "edgelist.realm"))) {
-    stop("Dependent variable is not of class 'edgelist.realm'.")
+  # is the dependent variable of class 'dependent.realm'?
+  if (!(inherits(state[[dep.var]], "dependent.realm"))) {
+    stop("Dependent variable is not of class 'dependent.realm'.")
   }
   
+  # are there origins, and are they of class 'origin.realm'?
+  origins <- state$origins
+  if (length(origins) == 0) {
+    stop("The state needs at least one origin (see createOrigin()).")
+  }
+  for (o in origins) {
+    if (o %in% c("destinations", "dep.var", "origins", "cache")) {
+      stop(paste0("'", o, "' cannot be used as the name of an origin."))
+    }
+    if (!(o %in% names(state)) || !inherits(state[[o]], "origin.realm")) {
+      stop(paste(o, "is not an object of class 'origin.realm' in the state."))
+    }
+  }
   
-  # extract nodeset names defined in edgelist
-  nodesets <- state[[dep.var]]$nodeSet
-  
-  # do nodeset names from edgelist have a corresponding nodeset and are they of class 'nodeset.realm'?
+  # do the nodeset names of the dependent variable and the origins have a
+  # corresponding nodeset and are they of class 'nodeSet.realm'?
+  nodesets <- unique(c(state[[dep.var]]$nodeSet,
+                       unlist(lapply(origins, function(o) state[[o]]$nodeSet))))
   for (i in 1:length(nodesets)) {
     if (!(nodesets[i] %in% names(state))) {
       stop(paste(nodesets[i], "has no corresponding object.",
-                 "Nodesets specified in the edgelist must have a corresponding object with the same name."))
+                 "Nodesets specified in the dependent variable and the origins",
+                 "must have a corresponding object with the same name."))
     }
     if (!(inherits(state[[nodesets[i]]], "nodeSet.realm"))) {
       stop(paste(nodesets[i], "is not of class 'nodeSet.realm'."))
@@ -40,12 +74,28 @@ checkProcessState <- function(state) {
   }
   
   # do dependent variable and individual nodeset have the same number of observations?
-  if (!(dim(state[[dep.var]]$data)[1] == length(state[[nodesets[3]]]$ids))) {
+  resources <- resourceNodeSet(state)
+  nResources <- length(state[[resources]]$ids)
+  if (!(length(state[[dep.var]]$data) == nResources)) {
     stop("Dependent variable and individual nodeset do not have the same number of observations.")
+  }
+  if (max(state[[dep.var]]$data) > length(state[[destinationNodeSet(state)]]$ids)) {
+    stop("Dependent variable contains locations that are not in its nodeset.")
+  }
+  
+  # are the origins defined for the same resources, with locations of their nodeset?
+  for (o in origins) {
+    if (state[[o]]$nodeSet[2] != resources || length(state[[o]]$data) != nResources) {
+      stop(paste("Origin", o, "must have one location for each of the", resources,
+                 "of the dependent variable."))
+    }
+    if (max(state[[o]]$data) > length(state[[state[[o]]$nodeSet[1]]]$ids)) {
+      stop(paste("Origin", o, "contains locations that are not in its nodeset."))
+    }
   }
   
   # extract covar names
-  covars <- names(state)[!(names(state) %in% c(dep.var, nodesets, "dep.var"))]
+  covars <- names(state)[!(names(state) %in% nonCovariates(state))]
   
   # if there are covars, check them
   if (length(covars) != 0) {
@@ -67,60 +117,69 @@ checkProcessState <- function(state) {
       if (!(state[[covars[i]]]$size[1] == length(state[[state[[covars[i]]]$nodeSet[1]]]$ids))) {
         stop(paste("The covar '", covars[i], "' is not of the same size as its assigned nodeset."))
       }
+      if (inherits(state[[covars[i]]], "network.realm") &&
+          !(state[[covars[i]]]$size[2] == length(state[[state[[covars[i]]]$nodeSet[2]]]$ids))) {
+        stop(paste("The covar '", covars[i], "' is not of the same size as its assigned nodesets."))
+      }
     }
   }
 }
 
 
 # createInternalCache
+# The cache of the dependent variable: for each origin, the weighted network
+# between the origin's locations (rows) and the destinations (columns), and
+# the weighted resource networks (sums of each resource covariate); and for the
+# destinations, the inflow and the sums of each resource covariate, used by
+# effects that do not depend on an origin:
+#   cache[[dep.var]]$destinations: inflow, resourceInflows
+#   cache[[dep.var]][[origin]]: valuedNetwork, resourceNetworks, sameNodeSet
+# sameNodeSet is TRUE when the origin has the same nodeset as the destinations,
+# i.e. when a resource can stay at its origin (a loop).
 createInternalCache <-
   function(processState,
            resourceCovariates = NULL) {
     cache <- list()
-    cacheObjectNames <- processState$dep.var
-    
-    for (name in cacheObjectNames) {
-      if (!(class(processState[[name]]) %in% c("network.realm", "edgelist.realm"))) {
-        stop(paste(name, "is not a network or edgelist."))
-      }
-      
-      nodeSet1 <- processState[[processState[[name]]$nodeSet[1]]]$ids
-      nodeSet2 <- processState[[processState[[name]]$nodeSet[2]]]$ids
-      nActors1 <- length(nodeSet1)
-      nActors2 <- length(nodeSet2)
-      
-      cache[[name]] <- list()
-      if (is(processState[[name]], "network.realm")) {
-        cache[[name]]$valuedNetwork <- processState[[name]]$data
-      }
-      if (is(processState[[name]], "edgelist.realm")) {
-        # create valued network from edge list
-        nResources <- processState[[name]]$size[1]
-        senders <- processState[[name]]$data[seq_len(nResources), 1]
-        receivers <- processState[[name]]$data[seq_len(nResources), 2]
-        tie <- senders + (receivers - 1) * nActors1
-        m <- matrix(as.numeric(tabulate(tie, nbins = nActors1 * nActors2)),
-                    nActors1, nActors2)
+    name <- processState$dep.var
+    if (!inherits(processState[[name]], "dependent.realm")) {
+      stop(paste(name, "is not a dependent variable (see createDependent())."))
+    }
+    destinationSet <- destinationNodeSet(processState, name)
+    nDestinations <- length(processState[[destinationSet]]$ids)
+    nResources <- processState[[name]]$size[1]
+    destinations <- processState[[name]]$data[seq_len(nResources)]
 
-        # create weighted resource networks; the values on each tie are summed
-        # in the order of the edge list, starting from 0, i.e. exactly as when
-        # adding the resources one by one
-        m.resource <-
-          lapply(resourceCovariates, function(ressCovar) {
-            values <- as.numeric(processState[[ressCovar]]$data[seq_len(nResources)])
-            matrix(tieSumsCpp(as.integer(tie), values, nActors1 * nActors2),
-                   nrow = nActors1, ncol = nActors2)
-          })
-        names(m.resource) <- resourceCovariates
+    # the values of the resource covariates; the values on each tie are summed
+    # in the order of the resources, starting from 0, i.e. exactly as when
+    # adding the resources one by one
+    values <- lapply(resourceCovariates, function(ressCovar) {
+      as.numeric(processState[[ressCovar]]$data[seq_len(nResources)])
+    })
+    names(values) <- resourceCovariates
 
-        cache[[name]]$valuedNetwork <- m
-        cache[[name]]$resourceNetworks <- m.resource
-        
-        # edge ids
-        edgeSet <- processState[[processState[[name]]$nodeSet[3]]]$ids
-        nEdges <- length(edgeSet)
-      }
-    } # end for loop
+    cache[[name]] <- list()
+    cache[[name]]$destinations <- list(
+      inflow = as.numeric(tabulate(destinations, nbins = nDestinations)),
+      resourceInflows = lapply(values, function(v) {
+        tieSumsCpp(as.integer(destinations), v, nDestinations)
+      })
+    )
+
+    for (origin in processState$origins) {
+      originSet <- processState[[origin]]$nodeSet[1]
+      nOrigins <- length(processState[[originSet]]$ids)
+      tie <- processState[[origin]]$data[seq_len(nResources)] +
+        (destinations - 1) * nOrigins
+      cache[[name]][[origin]] <- list(
+        valuedNetwork = matrix(as.numeric(tabulate(tie, nbins = nOrigins * nDestinations)),
+                               nOrigins, nDestinations),
+        resourceNetworks = lapply(values, function(v) {
+          matrix(tieSumsCpp(as.integer(tie), v, nOrigins * nDestinations),
+                 nrow = nOrigins, ncol = nDestinations)
+        }),
+        sameNodeSet = originSet == destinationSet
+      )
+    }
 
     cache
   }
@@ -147,7 +206,7 @@ getNetStatsFromDeps <- function(dep.var, oneDep, ans, effects){
   depState <- ans$state
   depState[[dep.var]] <- oneDep
   
-  resCovsInCache <- names(ans$cache[[dep.var]]$resourceNetworks)
+  resCovsInCache <- names(ans$cache[[dep.var]]$destinations$resourceInflows)
   if(is.null(resCovsInCache)){
     depCache <- createInternalCache(depState)
   } else {
@@ -156,22 +215,71 @@ getNetStatsFromDeps <- function(dep.var, oneDep, ans, effects){
   getNetworkStatistics(dep.var, depState, depCache, effects)
 }
 
+# effectOrigins
+# the origin of each effect (NA for effects that do not depend on an origin)
+effectOrigins <- function(effects) {
+  vapply(effects$effectFormulas, function(f) {
+    origin <- formals(f)$origin
+    if (is.character(origin)) origin else NA_character_
+  }, character(1), USE.NAMES = FALSE)
+}
+
+# effectSenders
+# the origin of resource `edge` for each effect (NA for effects that do not
+# depend on an origin), i.e. the i with which the effects are called
+effectSenders <- function(state, origins, edge) {
+  vapply(origins, function(origin) {
+    if (is.na(origin)) NA_real_ else as.numeric(state[[origin]]$data[edge])
+  }, numeric(1), USE.NAMES = FALSE)
+}
+
+# effectSenderTable
+# effectSenders for all resources: a matrix with one row per resource and one
+# column per effect
+effectSenderTable <- function(state, origins) {
+  nResources <- length(state[[state$dep.var]]$data)
+  table <- matrix(NA_real_, nResources, length(origins))
+  for (k in seq_along(origins)) {
+    if (!is.na(origins[k])) {
+      table[, k] <- as.numeric(state[[origins[k]]]$data)
+    }
+  }
+  table
+}
+
 # getNetworkStatistics
+# the target statistics: for effects with an origin, the sum of the target
+# contributions over all cells (origin location i, destination j); for effects
+# without, the sum over the destinations j
 getNetworkStatistics <- function(dep.var, state, cache, effects) {
   if (useCppSampler(effects, state)) {
     return(cppNetworkStatistics(dep.var, state, cache, effects))
   }
 
-  actors1 <- state[[dep.var]]$nodeSet[1]
-  actors2 <- state[[dep.var]]$nodeSet[2]
-  nActors1 <- length(state[[actors1]]$ids)
-  nActors2 <- length(state[[actors2]]$ids)
+  nDestinations <- length(state[[destinationNodeSet(state, dep.var)]]$ids)
+  origins <- effectOrigins(effects)
 
   targetStatistics <- unlist(lapply(
-    effects$effectFormulas,
-    function(f) {
+    seq_along(effects$effectFormulas),
+    function(k) {
+      f <- effects$effectFormulas[[k]]
+      if (is.na(origins[k])) {
+        return(sum(vapply(1:nDestinations, function(j) {
+          f(
+            dep.var = dep.var,
+            state = state,
+            cache = cache,
+            i = NA,
+            j = j,
+            update = NULL,
+            edge = NULL,
+            getTargetContribution = TRUE
+          )
+        }, numeric(1))))
+      }
+      nOrigins <- length(state[[state[[origins[k]]]$nodeSet[1]]]$ids)
       sum(apply(
-        expand.grid(1:nActors1, 1:nActors2),
+        expand.grid(1:nOrigins, 1:nDestinations),
         1,
         function(v) {
           f(
@@ -261,7 +369,6 @@ runPhase1 <- function(dep.var,
                       thinningN1,
                       gainN1,
                       multinomialProposal = FALSE,
-                      allowLoops,
                       verbose = FALSE,
                       cl = NULL) {
   # simulate statistic matrix, with one chain per worker if cl is a cluster
@@ -277,8 +384,7 @@ runPhase1 <- function(dep.var,
       MoreArgs = list(dep.var = dep.var, state = state, cache = cache,
                       effects = effects, initialParameters = initialParameters,
                       burnIn = burnInN1, thinning = thinningN1,
-                      multinomialProposal = multinomialProposal,
-                      allowLoops = allowLoops)
+                      multinomialProposal = multinomialProposal)
     )
     statisticsMatrix <- Reduce("rbind", statisticsMatrix)
   } else {
@@ -293,7 +399,6 @@ runPhase1 <- function(dep.var,
       iterations = iterationsN1,
       thinning = thinningN1,
       multinomialProposal = multinomialProposal,
-      allowLoops,
       verbose = verbose
     )
   }
@@ -337,7 +442,6 @@ runPhase2 <- function(dep.var,
                       initialIterationsN2,
                       cl = NULL,
                       multinomialProposal = FALSE,
-                      allowLoops,
                       verbose = FALSE) {
   # calculate observed statistics
   observedStatistics <-
@@ -355,7 +459,6 @@ runPhase2 <- function(dep.var,
       n = rep(burnInN2, cpus),
       MoreArgs = list(dep.var = dep.var, state = state, cache = cache,
                       effects = effects, parameters = initialParameters,
-                      allowLoops = allowLoops,
                       multinomialProposal = multinomialProposal)
     )
   } else {
@@ -366,7 +469,6 @@ runPhase2 <- function(dep.var,
         cache,
         effects,
         initialParameters,
-        allowLoops,
         multinomialProposal = multinomialProposal,
         n = burnInN2
       )
@@ -399,7 +501,7 @@ runPhase2 <- function(dep.var,
                         observedStatistics = observedStatistics, gain = gain,
                         thinningN2 = thinningN2, iterations = iterations,
                         multinomialProposal = multinomialProposal,
-                        allowLoops = allowLoops, verbose = FALSE)
+                        verbose = FALSE)
       )
       parameterList <- lapply(res, "[[", "parameters")
       parameters <- colMeans(Reduce(rbind, parameterList))
@@ -417,7 +519,6 @@ runPhase2 <- function(dep.var,
         thinningN2,
         iterations,
         multinomialProposal = multinomialProposal,
-        allowLoops = allowLoops,
         verbose = verbose
       )
       state <- resSub2$state
@@ -466,17 +567,16 @@ runPhase2GT <- function(dep.var,
                         minESS = 0.5,
                         cl = NULL,
                         multinomialProposal = FALSE,
-                        allowLoops,
                         verbose = FALSE) {
   # with a cluster cl, one chain per worker
   cpus <- if (is.null(cl)) 1 else length(cl)
 
   runChain <- function(chain, dep.var, effects, parameters, burnIn, thinning,
-                       allowLoops, multinomialProposal) {
+                       multinomialProposal) {
     res <- simulateStatisticVectors(
       dep.var, chain$state, chain$cache, effects, parameters,
       burnIn = burnIn, iterations = chain$draws, thinning = thinning,
-      allowLoops = allowLoops, multinomialProposal = multinomialProposal,
+      multinomialProposal = multinomialProposal,
       returnState = TRUE
     )
     list(statistics = res$statistics, state = res$state, cache = res$cache)
@@ -492,7 +592,7 @@ runPhase2GT <- function(dep.var,
     }
     chainArgs <- list(dep.var = dep.var, effects = effects,
                       parameters = parameters, burnIn = burnIn,
-                      thinning = thinning, allowLoops = allowLoops,
+                      thinning = thinning,
                       multinomialProposal = multinomialProposal)
     if (is.null(cl)) {
       chains <<- lapply(chains, function(chain) do.call(runChain, c(list(chain), chainArgs)))
@@ -633,13 +733,13 @@ geyerThompsonStep <- function(statistics, observedStatistics, minESS = 0.5,
 # estimation. Returns NULL if the estimate does not exist (e.g. separation) or
 # the optimisation fails. The pseudo-likelihood is calculated in C++ if all
 # effects have a C++ version (mpleObjectiveCpp), otherwise in R.
-getMPLE <- function(dep.var, state, cache, effects, allowLoops,
+getMPLE <- function(dep.var, state, cache, effects,
                     maxNewton = 50, tol = 1e-8) {
   p <- length(effects$effectFormulas)
   evaluate <- if (useCppSampler(effects, state)) {
-    mpleObjectiveCpp(dep.var, state, cache, effects, allowLoops)
+    mpleObjectiveCpp(dep.var, state, cache, effects)
   } else {
-    mpleObjectiveR(dep.var, state, cache, effects, allowLoops)
+    mpleObjectiveR(dep.var, state, cache, effects)
   }
 
   theta <- rep(0, p)
@@ -677,35 +777,35 @@ getMPLE <- function(dep.var, state, cache, effects, allowLoops,
 # returns a function of the parameters that gives the log pseudo-likelihood
 # and, with derivatives = TRUE, its gradient and Hessian, using the R effect
 # functions (see getMPLE); the change statistics are calculated once and stored
-mpleObjectiveR <- function(dep.var, state, cache, effects, allowLoops) {
+mpleObjectiveR <- function(dep.var, state, cache, effects) {
   state <- toMutableState(state, dep.var)
   cache <- toMutableCache(cache)
-  edgelist <- state[[dep.var]]
-  nodeName <- edgelist$nodeSet[1]
-  resourceName <- edgelist$nodeSet[3]
-  nodes <- state[[nodeName]]$ids[state[[nodeName]]$considerWhenSampling]
+  dependent <- state[[dep.var]]
+  nodeName <- destinationNodeSet(state, dep.var)
+  resourceName <- resourceNodeSet(state, dep.var)
+  destinations <- state[[nodeName]]$ids[state[[nodeName]]$considerWhenSampling]
   resources <- which(state[[resourceName]]$considerWhenSampling)
   effectFunctions <- effects$effectFormulas
+  origins <- effectOrigins(effects)
   p <- length(effectFunctions)
 
   # for each resource: change statistics of adding it to every possible
   # destination after removing it, and which destination is observed
   choiceSets <- lapply(resources, function(e) {
-    i <- edgelist$data[e, 1]
-    j <- edgelist$data[e, 2]
-    destinations <- if (allowLoops) nodes else setdiff(nodes, i)
+    senders <- effectSenders(state, origins, e)
+    j <- dependent$data[e]
 
-    cells <- getCacheCells(cache[[dep.var]], i, j)
-    updateCacheInPlace(cache[[dep.var]], i, j, resourceID = e, state = state, update = -1)
-    setEdgeInPlace(edgelist, e, rep(NA, 2))
+    cells <- getCacheCells(cache[[dep.var]], e, j, state)
+    updateCacheInPlace(cache[[dep.var]], e, j, state = state, update = -1)
+    setEdgeInPlace(dependent, e, NA)
     X <- t(vapply(destinations, function(k) {
-      vapply(effectFunctions, function(f) {
-        f(dep.var = dep.var, state = state, cache = cache,
-          i = i, j = k, update = 1, edge = e)
+      vapply(seq_along(effectFunctions), function(f) {
+        effectFunctions[[f]](dep.var = dep.var, state = state, cache = cache,
+                             i = senders[f], j = k, update = 1, edge = e)
       }, numeric(1))
     }, numeric(p)))
-    restoreCacheCells(cache[[dep.var]], i, j, cells)
-    setEdgeInPlace(edgelist, e, c(i, j))
+    restoreCacheCells(cache[[dep.var]], e, j, state, cells)
+    setEdgeInPlace(dependent, e, j)
 
     list(X = matrix(X, ncol = p), observed = match(j, destinations))
   })
@@ -744,7 +844,6 @@ runPhase3 <- function(dep.var,
                       burnInN3,
                       thinningN3,
                       cl = NULL,
-                      allowLoops,
                       verbose = FALSE,
                       returnDeps = FALSE,
                       multinomialProposal = FALSE,
@@ -759,7 +858,7 @@ runPhase3 <- function(dep.var,
       MoreArgs = list(dep.var = dep.var, state = state, cache = cache,
                       effects = effects, initialParameters = parameters,
                       burnIn = burnInN3, thinning = thinningN3,
-                      allowLoops = allowLoops, verbose = verbose,
+                      verbose = verbose,
                       returnDeps = returnDeps,
                       multinomialProposal = multinomialProposal, fish = FALSE)
     )
@@ -789,7 +888,6 @@ runPhase3 <- function(dep.var,
       burnIn = burnInN3,
       iterations = iterationsN3,
       thinning = thinningN3,
-      allowLoops,
       verbose = verbose,
       returnDeps = returnDeps,
       multinomialProposal = multinomialProposal,
@@ -849,7 +947,6 @@ runSubphase2 <- function(dep.var,
                          thinningN2,
                          iterations,
                          multinomialProposal = FALSE,
-                         allowLoops,
                          verbose = FALSE) {
   parameters <- c()
 
@@ -864,7 +961,6 @@ runSubphase2 <- function(dep.var,
         cache,
         effects,
         initialParameters,
-        allowLoops,
         multinomialProposal = multinomialProposal,
         n = (thinningN2 + 1)
       )
@@ -929,22 +1025,21 @@ simulateNSteps <-
            cache,
            effects,
            parameters,
-           allowLoops = TRUE,
-           senderFixed = TRUE,
-           receiverFixed = FALSE,
            multinomialProposal = FALSE,
            debug = FALSE,
            n = 1) {
-    if (senderFixed && !debug && useCppSampler(effects, state)) {
+    if (!debug && useCppSampler(effects, state)) {
       res <- simulateChain(dep.var, state, cache, effects, parameters,
                            burnIn = n, iterations = 0, thinning = 0,
-                           allowLoops = allowLoops,
                            multinomialProposal = multinomialProposal)
       return(list(state = res$state, cache = res$cache))
     }
 
     state <- toMutableState(state, dep.var)
     cache <- toMutableCache(cache)
+    # the origins of the resources do not change: their senders for each
+    # effect are looked up in a table
+    senderTable <- effectSenderTable(state, effectOrigins(effects))
     for (i in 1:n) {
       res <-
         simulateOneStep(
@@ -953,11 +1048,9 @@ simulateNSteps <-
           cache,
           effects,
           parameters,
-          allowLoops,
-          senderFixed,
-          receiverFixed,
           multinomialProposal,
-          debug
+          debug,
+          senderTable = senderTable
         )
       state <- res$state
       cache <- res$cache
@@ -967,83 +1060,72 @@ simulateNSteps <-
 
 
 # simulateOneStep
-# changes state and cache in place; both must be in their in-place form
+# changes state and cache in place; both must be in their in-place form.
+# A step moves one resource to another destination; its origins do not change.
 simulateOneStep <-
   function(dep.var,
            state,
            cache,
            effects,
            parameters,
-           allowLoops,
-           senderFixed = TRUE,
-           receiverFixed = FALSE,
            multinomialProposal = FALSE,
-           debug = FALSE) {
-    resourceName <- state[[dep.var]]$nodeSet[3]
-    nodeName <- state[[dep.var]]$nodeSet[1]
+           debug = FALSE,
+           senderTable = effectSenderTable(state, effectOrigins(effects))) {
+    resourceName <- resourceNodeSet(state, dep.var)
+    nodeName <- destinationNodeSet(state, dep.var)
     resourceSet <-
       which(state[[resourceName]]$considerWhenSampling)
 
     # sample edges to swap
     randomEdge <- sample(resourceSet, size = 1)
-    i <- state[[dep.var]]$data[randomEdge, 1]
-    j <- state[[dep.var]]$data[randomEdge, 2]
+    j <- state[[dep.var]]$data[randomEdge]
+    # the origin of the resource for each effect (NA for effects that do not
+    # depend on an origin)
+    senders <- senderTable[randomEdge, ]
 
-    # nEdges <- state[[dep.var]]$size[1]
     nodeSet <-
       state[[nodeName]]$ids[state[[nodeName]]$considerWhenSampling]
-    if (!allowLoops) {
-      nodeSet <- setdiff(nodeSet, i)
-    }
 
     effectFunctions <- effects$effectFormulas
+    nEffects <- length(effectFunctions)
+    # the change statistics of all effects for moving the resource to or from
+    # destination k
+    changeStatistics <- function(k, update) {
+      statistics <- numeric(nEffects)
+      for (e in seq_len(nEffects)) {
+        statistics[e] <- effectFunctions[[e]](
+          dep.var = dep.var,
+          state = state,
+          cache = cache,
+          i = senders[e],
+          j = k,
+          update = update,
+          edge = randomEdge
+        )
+      }
+      statistics
+    }
 
     ## MULTINOMIAL PROPOSAL ## CONSIDER REFACTOR TO FUNCTION
 
     if (multinomialProposal) {
       if (debug) {
-        print(paste("Proposed multinomial change from", i, j))
+        print(paste("Proposed multinomial change of", randomEdge, "from", j))
       }
 
       # remove resource from process state
-      statisticsDrop <-
-        unlist(lapply(effectFunctions, function(f) {
-          f(
-            dep.var = dep.var,
-            state = state,
-            cache = cache,
-            i = i,
-            j = j,
-            update = -1,
-            edge = randomEdge
-          )
-        }))
+      statisticsDrop <- changeStatistics(j, -1)
 
       # update process state and cache
-      updateCacheInPlace(cache[[dep.var]], i, j,
-                         resourceID = randomEdge, state = state, update = -1)
-      setEdgeInPlace(state[[dep.var]], randomEdge, rep(NA, 2))
+      updateCacheInPlace(cache[[dep.var]], randomEdge, j, state = state, update = -1)
+      setEdgeInPlace(state[[dep.var]], randomEdge, NA)
 
-      # for each possible receiver
-      statisticsCreate <-
-        sapply(nodeSet, function(k) {
-          unlist(lapply(effectFunctions, function(f) {
-            f(
-              dep.var = dep.var,
-              state = state,
-              cache = cache,
-              i = i,
-              j = k,
-              update = 1,
-              edge = randomEdge
-            )
-          }))
-        },
-        simplify = TRUE
-        )
-      # one row per effect, also if there is only one effect (sapply then
-      # returns a vector)
-      statisticsCreate <- matrix(statisticsCreate, nrow = length(effectFunctions))
+      # for each possible receiver; one row per effect
+      statisticsCreate <- matrix(
+        vapply(nodeSet, function(k) changeStatistics(k, 1),
+               numeric(length(effectFunctions))),
+        nrow = length(effectFunctions)
+      )
       objValues <-
         colSums((statisticsCreate + statisticsDrop) * parameters)
       pChange <- exp(objValues) / sum(exp(objValues))
@@ -1053,63 +1135,33 @@ simulateOneStep <-
       l <- nodeSet[draw]
 
       # update process state and cache
-      updateCacheInPlace(cache[[dep.var]], i, l,
-                         resourceID = randomEdge, state = state, update = 1)
-      setEdgeInPlace(state[[dep.var]], randomEdge, c(i, l))
+      updateCacheInPlace(cache[[dep.var]], randomEdge, l, state = state, update = 1)
+      setEdgeInPlace(state[[dep.var]], randomEdge, l)
     }
 
 
     ## BINOMIAL PROPOSAL ## CONSIDER REFACTOR TO FUNCTION
 
     if (!multinomialProposal) {
-      if (senderFixed) {
-        k <- i
-      } # TODO else define k differently
-
-      l <-
-        sample(nodeSet, size = 1) # TODO consider case of receiver fixed
+      l <- sample(nodeSet, size = 1)
 
       if (debug) {
-        print(paste("Proposed change from", i, j, "to", k, l))
+        print(paste("Proposed change of", randomEdge, "from", j, "to", l))
       }
-
 
       if (j == l) {
         return(list(state = state, cache = cache))
       }
 
-      statisticsDrop <-
-        unlist(lapply(effectFunctions, function(f) {
-          f(
-            dep.var = dep.var,
-            state = state,
-            cache = cache,
-            i = i,
-            j = j,
-            update = -1,
-            edge = randomEdge
-          )
-        }))
+      statisticsDrop <- changeStatistics(j, -1)
 
       # remove the resource from state and cache, keeping what is needed to
       # undo this if the change is rejected
-      oldCells <- getCacheCells(cache[[dep.var]], i, j)
-      updateCacheInPlace(cache[[dep.var]], i, j,
-                         resourceID = randomEdge, state = state, update = -1)
-      setEdgeInPlace(state[[dep.var]], randomEdge, rep(NA, 2))
+      oldCells <- getCacheCells(cache[[dep.var]], randomEdge, j, state)
+      updateCacheInPlace(cache[[dep.var]], randomEdge, j, state = state, update = -1)
+      setEdgeInPlace(state[[dep.var]], randomEdge, NA)
 
-      statisticsCreate <-
-        unlist(lapply(effectFunctions, function(f) {
-          f(
-            dep.var = dep.var,
-            state = state,
-            cache = cache,
-            i = k,
-            j = l,
-            update = +1,
-            edge = randomEdge
-          )
-        }))
+      statisticsCreate <- changeStatistics(l, 1)
 
       changeContribution <-
         sum((statisticsDrop + statisticsCreate) * parameters)
@@ -1117,12 +1169,11 @@ simulateOneStep <-
       acceptanceProbability <- min(1, exp(changeContribution))
 
       if (acceptanceProbability >= runif(1)) {
-        updateCacheInPlace(cache[[dep.var]], k, l,
-                           resourceID = randomEdge, state = state, update = 1)
-        setEdgeInPlace(state[[dep.var]], randomEdge, c(k, l))
+        updateCacheInPlace(cache[[dep.var]], randomEdge, l, state = state, update = 1)
+        setEdgeInPlace(state[[dep.var]], randomEdge, l)
       } else {
-        restoreCacheCells(cache[[dep.var]], i, j, oldCells)
-        setEdgeInPlace(state[[dep.var]], randomEdge, c(i, j))
+        restoreCacheCells(cache[[dep.var]], randomEdge, j, state, oldCells)
+        setEdgeInPlace(state[[dep.var]], randomEdge, j)
       }
     }
 
@@ -1139,7 +1190,6 @@ simulateStatisticVectors <- function(dep.var,
                                      burnIn,
                                      iterations,
                                      thinning,
-                                     allowLoops,
                                      verbose = FALSE,
                                      multinomialProposal = FALSE,
                                      fish = FALSE,
@@ -1152,7 +1202,7 @@ simulateStatisticVectors <- function(dep.var,
     }
     res <- simulateChain(dep.var, state, cache, effects, initialParameters,
                          burnIn = burnIn, iterations = iterations, thinning = thinning,
-                         allowLoops = allowLoops, multinomialProposal = multinomialProposal,
+                         multinomialProposal = multinomialProposal,
                          returnDraws = returnDeps)
     statisticsMatrix <- res$statistics
     rownames(statisticsMatrix) <- rep("stats", nrow(statisticsMatrix))
@@ -1182,7 +1232,6 @@ simulateStatisticVectors <- function(dep.var,
       cache,
       effects,
       initialParameters,
-      allowLoops,
       multinomialProposal = multinomialProposal,
       n = burnIn
     )
@@ -1208,7 +1257,6 @@ simulateStatisticVectors <- function(dep.var,
         cache,
         effects,
         initialParameters,
-        allowLoops,
         multinomialProposal = multinomialProposal,
         n = thinning + 1
       )
@@ -1249,40 +1297,46 @@ simulateStatisticVectors <- function(dep.var,
 
 
 # updateWeightedCache
-updateWeightedCache <- function(cache,
-                                sender,
+# adds (update = 1) or removes (update = -1) resource `edge` at destination
+# `receiver` in the cache of a dependent variable (as a list), i.e. in the
+# networks of all origins and in the destinations
+updateWeightedCache <- function(cacheDepVar,
+                                edge,
                                 receiver,
-                                resourceID = NULL,
-                                state = NULL,
-                                dep.var = NULL,
-                                # refers to the element of the cache to be updated
-                                update,
-                                debug = FALSE) {
-  if (debug) {
-    print(paste("update cache for s-r-u", sender, receiver, update))
+                                state,
+                                update) {
+  for (origin in names(cacheDepVar)) {
+    x <- cacheDepVar[[origin]]
+    if (origin == "destinations") {
+      for (ressCovar in names(x$resourceInflows)) {
+        x$resourceInflows[[ressCovar]][receiver] <-
+          x$resourceInflows[[ressCovar]][receiver] + update * state[[ressCovar]]$data[edge]
+      }
+      x$inflow[receiver] <- x$inflow[receiver] + update
+    } else {
+      sender <- state[[origin]]$data[edge]
+      # Updates of weighted resource caches
+      for (ressCovar in names(x$resourceNetworks)) {
+        v <- x$resourceNetworks[[ressCovar]][sender, receiver]
+        x$resourceNetworks[[ressCovar]][sender, receiver] <-
+          v + update * state[[ressCovar]]$data[edge]
+      }
+      # weighted updates
+      x$valuedNetwork[sender, receiver] <- x$valuedNetwork[sender, receiver] + update
+    }
+    cacheDepVar[[origin]] <- x
   }
-
-  # Updates of weighted resource caches
-  resourceCovariates <- names(cache$resourceNetworks)
-  for (ressCovar in resourceCovariates) {
-    v <- cache$resourceNetworks[[ressCovar]][sender, receiver]
-    cache$resourceNetworks[[ressCovar]][sender, receiver] <-
-      v + update * state[[ressCovar]]$data[resourceID]
-  }
-
-  # weighted updates
-  cache$valuedNetwork[sender, receiver] <-
-    cache$valuedNetwork[sender, receiver] + update
-
-  cache
+  cacheDepVar
 }
 
 
 ########## in-place state and cache for MCMC chains
 # Within one chain, the dependent variable of the state and the cache are
-# stored in environments and updated in place. This avoids copying the edgelist
-# and all cache matrices in every simulation step. Effects read them as before
-# (state[[dep.var]]$data, cache[[dep.var]]$valuedNetwork[i, j], ...).
+# stored in environments and updated in place. This avoids copying the
+# destinations and all cache matrices in every simulation step. Effects read
+# them as before (state[[dep.var]]$data, cache[[dep.var]][[origin]]$valuedNetwork[i, j],
+# ...): the cache of a dependent variable is a list with one environment for
+# the destinations and one for each origin.
 # Updates are done by functions whose environment is that environment, using
 # <<-; e$x[i, j] <- v would copy x, and evalq() is not byte-compiled.
 # Anything that leaves a chain is converted back with toListState/toListCache.
@@ -1300,7 +1354,7 @@ toMutableState <- function(state, dep.var) {
   # environment is set to e below)
   data <- NULL
   e$.setEdge <- function(edge, value) {
-    data[edge, ] <<- value
+    data[edge] <<- value
   }
   environment(e$.setEdge) <- e
 
@@ -1322,88 +1376,167 @@ toListState <- function(state, dep.var) {
 
 # toMutableCache
 toMutableCache <- function(cache) {
-  lapply(cache, function(x) {
-    if (is.environment(x)) {
-      return(x)
+  lapply(cache, function(cacheDepVar) {
+    if (is.environment(cacheDepVar$destinations)) {
+      return(cacheDepVar)
     }
-    e <- list2env(x, envir = new.env(parent = baseenv()))
-    e$.names <- names(x)
-    if (is.null(x$resourceNetworks)) {
-      e$resourceNetworks <- NULL
-    }
-
-    # placeholders for the variables the functions below update in e (their
-    # environment is set to e below)
-    valuedNetwork <- resourceNetworks <- NULL
-
-    # same logic as updateWeightedCache
-    e$.update <- function(sender, receiver, resourceID, state, update) {
-      # Updates of weighted resource caches
-      for (ressCovar in names(resourceNetworks)) {
-        resourceNetworks[[ressCovar]][sender, receiver] <<-
-          resourceNetworks[[ressCovar]][sender, receiver] +
-          update * state[[ressCovar]]$data[resourceID]
+    out <- lapply(names(cacheDepVar), function(name) {
+      if (name == "destinations") {
+        mutableDestinations(cacheDepVar[[name]])
+      } else {
+        mutableOrigin(cacheDepVar[[name]])
       }
-
-      # weighted updates
-      valuedNetwork[sender, receiver] <<- valuedNetwork[sender, receiver] + update
-    }
-
-    # the cells that an update of sender-receiver changes, to restore them
-    # exactly if a proposed change is rejected (adding back a numeric resource
-    # covariate value is not always exact in floating point)
-    e$.getCells <- function(sender, receiver) {
-      list(
-        valued = valuedNetwork[sender, receiver],
-        resource = lapply(resourceNetworks, function(m) m[sender, receiver])
-      )
-    }
-
-    e$.restoreCells <- function(sender, receiver, cells) {
-      for (ressCovar in names(resourceNetworks)) {
-        resourceNetworks[[ressCovar]][sender, receiver] <<- cells$resource[[ressCovar]]
-      }
-      valuedNetwork[sender, receiver] <<- cells$valued
-    }
-
-    environment(e$.update) <- e
-    environment(e$.getCells) <- e
-    environment(e$.restoreCells) <- e
-    e
+    })
+    names(out) <- names(cacheDepVar)
+    out
   })
+}
+
+# mutableOrigin
+# the cache of one origin as an environment, with functions that update it in
+# place (same logic as updateWeightedCache)
+mutableOrigin <- function(x) {
+  e <- list2env(x, envir = new.env(parent = baseenv()))
+  e$.names <- names(x)
+  if (is.null(x$resourceNetworks)) {
+    e$resourceNetworks <- NULL
+  }
+
+  # placeholders for the variables the functions below update in e (their
+  # environment is set to e below)
+  valuedNetwork <- resourceNetworks <- NULL
+
+  e$.update <- function(sender, receiver, resourceID, state, update) {
+    # Updates of weighted resource caches
+    for (ressCovar in names(resourceNetworks)) {
+      resourceNetworks[[ressCovar]][sender, receiver] <<-
+        resourceNetworks[[ressCovar]][sender, receiver] +
+        update * state[[ressCovar]]$data[resourceID]
+    }
+
+    # weighted updates
+    valuedNetwork[sender, receiver] <<- valuedNetwork[sender, receiver] + update
+  }
+
+  # the cells that an update of sender-receiver changes, to restore them
+  # exactly if a proposed change is rejected (adding back a numeric resource
+  # covariate value is not always exact in floating point)
+  e$.getCells <- function(sender, receiver) {
+    list(
+      valued = valuedNetwork[sender, receiver],
+      resource = lapply(resourceNetworks, function(m) m[sender, receiver])
+    )
+  }
+
+  e$.restoreCells <- function(sender, receiver, cells) {
+    for (ressCovar in names(resourceNetworks)) {
+      resourceNetworks[[ressCovar]][sender, receiver] <<- cells$resource[[ressCovar]]
+    }
+    valuedNetwork[sender, receiver] <<- cells$valued
+  }
+
+  environment(e$.update) <- e
+  environment(e$.getCells) <- e
+  environment(e$.restoreCells) <- e
+  e
+}
+
+# mutableDestinations
+# the cache of the destinations as an environment (as mutableOrigin)
+mutableDestinations <- function(x) {
+  e <- list2env(x, envir = new.env(parent = baseenv()))
+  e$.names <- names(x)
+  if (is.null(x$resourceInflows)) {
+    e$resourceInflows <- NULL
+  }
+
+  inflow <- resourceInflows <- NULL
+
+  e$.update <- function(receiver, resourceID, state, update) {
+    for (ressCovar in names(resourceInflows)) {
+      resourceInflows[[ressCovar]][receiver] <<-
+        resourceInflows[[ressCovar]][receiver] +
+        update * state[[ressCovar]]$data[resourceID]
+    }
+    inflow[receiver] <<- inflow[receiver] + update
+  }
+
+  e$.getCells <- function(receiver) {
+    list(
+      inflow = inflow[receiver],
+      resource = lapply(resourceInflows, function(v) v[receiver])
+    )
+  }
+
+  e$.restoreCells <- function(receiver, cells) {
+    for (ressCovar in names(resourceInflows)) {
+      resourceInflows[[ressCovar]][receiver] <<- cells$resource[[ressCovar]]
+    }
+    inflow[receiver] <<- cells$inflow
+  }
+
+  environment(e$.update) <- e
+  environment(e$.getCells) <- e
+  environment(e$.restoreCells) <- e
+  e
 }
 
 # toListCache
 toListCache <- function(cache) {
-  lapply(cache, function(e) {
-    if (!is.environment(e)) {
-      return(e)
-    }
-    mget(e$.names, envir = e)
+  lapply(cache, function(cacheDepVar) {
+    lapply(cacheDepVar, function(e) {
+      if (!is.environment(e)) {
+        return(e)
+      }
+      mget(e$.names, envir = e)
+    })
   })
 }
 
 # updateCacheInPlace
-# same as updateWeightedCache, but changes the cache environment in place
-updateCacheInPlace <- function(cacheEnv, sender, receiver, resourceID, state, update) {
-  cacheEnv$.update(sender, receiver, resourceID, state, update)
+# same as updateWeightedCache, but changes the cache environments in place
+updateCacheInPlace <- function(cacheDepVar, edge, receiver, state, update) {
+  for (name in names(cacheDepVar)) {
+    if (name == "destinations") {
+      cacheDepVar[[name]]$.update(receiver, edge, state, update)
+    } else {
+      cacheDepVar[[name]]$.update(state[[name]]$data[edge], receiver, edge, state, update)
+    }
+  }
   invisible(NULL)
 }
 
 # getCacheCells
-getCacheCells <- function(cacheEnv, sender, receiver) {
-  cacheEnv$.getCells(sender, receiver)
+# the cells that adding or removing resource `edge` at destination `receiver`
+# changes, for restoreCacheCells
+getCacheCells <- function(cacheDepVar, edge, receiver, state) {
+  cells <- list()
+  for (name in names(cacheDepVar)) {
+    cells[[name]] <- if (name == "destinations") {
+      cacheDepVar[[name]]$.getCells(receiver)
+    } else {
+      cacheDepVar[[name]]$.getCells(state[[name]]$data[edge], receiver)
+    }
+  }
+  cells
 }
 
 # restoreCacheCells
-restoreCacheCells <- function(cacheEnv, sender, receiver, cells) {
-  cacheEnv$.restoreCells(sender, receiver, cells)
+restoreCacheCells <- function(cacheDepVar, edge, receiver, state, cells) {
+  for (name in names(cacheDepVar)) {
+    if (name == "destinations") {
+      cacheDepVar[[name]]$.restoreCells(receiver, cells[[name]])
+    } else {
+      cacheDepVar[[name]]$.restoreCells(state[[name]]$data[edge], receiver, cells[[name]])
+    }
+  }
   invisible(NULL)
 }
 
 # setEdgeInPlace
-# sets the sender and receiver of one resource in the edgelist environment
-setEdgeInPlace <- function(edgelistEnv, edge, value) {
-  edgelistEnv$.setEdge(edge, value)
+# sets the destination of one resource (NA while it is moved) in the
+# environment of the dependent variable
+setEdgeInPlace <- function(dependentEnv, edge, value) {
+  dependentEnv$.setEdge(edge, value)
   invisible(NULL)
 }

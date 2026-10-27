@@ -10,6 +10,8 @@
 #' particular groups. This models segregation dynamics.
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -25,6 +27,7 @@
 #' @keywords internal
 crowding_out_prop_covar_bin <-
   function(dep.var = 1,
+           origin,
            resource.attribute.index,
            state,
            cache,
@@ -44,17 +47,17 @@ crowding_out_prop_covar_bin <-
       
       # get the diagonal value
       loops <-
-        cache[[dep.var]]$valuedNetwork[i, j] - cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
+        cache[[dep.var]][[origin]]$valuedNetwork[i, j] - cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
       
       # get the proportion of X'ers that move in to the node
       # if nobody comes in, the prop equals 0.5
-      if ((sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[i, j]) == 0) {
+      if ((sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[i, j]) == 0) {
         prop <- 0.5
       } else {
         prop <-
-          (sum(cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][, j]) -
-             cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]) /
-          (sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[i, j])
+          (sum(cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][, j]) -
+             cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]) /
+          (sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[i, j])
       }
       
       return(loops * prop)
@@ -65,13 +68,13 @@ crowding_out_prop_covar_bin <-
     # or on the inflow proportion that the target node has
     # both need to know the proportion before
     
-    if ((sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[j, j]) == 0) {
+    if ((sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[j, j]) == 0) {
       propBefore <- 0.5
     } else {
       propBefore <-
-        (sum(cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][, j]) -
-           cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][j, j]) /
-        (sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[j, j])
+        (sum(cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][, j]) -
+           cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][j, j]) /
+        (sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[j, j])
     }
     
     # first if a loop is formed
@@ -87,18 +90,18 @@ crowding_out_prop_covar_bin <-
     # now if no loop is formed and the proportion changes
     # number of loops of type 0 people in target occ
     loops <-
-      cache[[dep.var]]$valuedNetwork[j, j] - cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][j, j]
+      cache[[dep.var]][[origin]]$valuedNetwork[j, j] - cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][j, j]
     
     # if the last one leaves, the proportion after becomes 0
     
-    if (((sum(cache[[dep.var]]$valuedNetwork[, j]) + update) - cache[[dep.var]]$valuedNetwork[j, j]) == 0) {
+    if (((sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) + update) - cache[[dep.var]][[origin]]$valuedNetwork[j, j]) == 0) {
       propAfter <- 0.5
     } else {
       propAfter <-
-        ((sum(cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][, j]) +
+        ((sum(cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][, j]) +
             update * state[[resource.attribute.index]]$data[edge]) -
-           cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][j, j]) /
-        ((sum(cache[[dep.var]]$valuedNetwork[, j]) + update) - cache[[dep.var]]$valuedNetwork[j, j])
+           cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][j, j]) /
+        ((sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) + update) - cache[[dep.var]][[origin]]$valuedNetwork[j, j])
     }
     
     change <- propAfter - propBefore
@@ -115,6 +118,8 @@ crowding_out_prop_covar_bin <-
 #' attractive dependent on the change in composition.
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -130,6 +135,7 @@ crowding_out_prop_covar_bin <-
 #' @keywords internal
 staying_by_prop_bin_inflow <-
   function(dep.var = 1,
+           origin,
            resource.attribute.index,
            state,
            cache,
@@ -148,17 +154,17 @@ staying_by_prop_bin_inflow <-
       }
       
       # get the diagonal value, i.e. the amount of people that stay here
-      loops <- cache[[dep.var]]$valuedNetwork[i, j]
+      loops <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
       
       # get the proportion of X'ers that move in to the node
       # if nobody comes in, the prop equals 0.5
-      if ((sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[j, j]) == 0) {
+      if ((sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[j, j]) == 0) {
         prop <- 0.5
       } else {
         prop <-
-          (sum(cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][, j]) -
-             cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][j, j]) /
-          (sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[j, j])
+          (sum(cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][, j]) -
+             cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][j, j]) /
+          (sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[j, j])
       }
       
       return(loops * prop)
@@ -169,13 +175,13 @@ staying_by_prop_bin_inflow <-
     # or on the inflow proportion that the target node has
     # both need to know the proportion before
     
-    if ((sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[j, j]) == 0) {
+    if ((sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[j, j]) == 0) {
       propBefore <- 0.5
     } else {
       propBefore <-
-        (sum(cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][, j]) -
-           cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][j, j]) /
-        (sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[j, j])
+        (sum(cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][, j]) -
+           cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][j, j]) /
+        (sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[j, j])
     }
     
     # first if a loop is formed
@@ -186,18 +192,18 @@ staying_by_prop_bin_inflow <-
     
     # now if no loop is formed and the proportion changes
     # number of loops in target occ
-    loops <- cache[[dep.var]]$valuedNetwork[j, j]
+    loops <- cache[[dep.var]][[origin]]$valuedNetwork[j, j]
     
     # if the last one leaves, the proportion after becomes 0.5
     
-    if (((sum(cache[[dep.var]]$valuedNetwork[, j]) + update) - cache[[dep.var]]$valuedNetwork[j, j]) == 0) {
+    if (((sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) + update) - cache[[dep.var]][[origin]]$valuedNetwork[j, j]) == 0) {
       propAfter <- 0.5
     } else {
       propAfter <-
-        ((sum(cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][, j]) +
+        ((sum(cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][, j]) +
             update * state[[resource.attribute.index]]$data[edge]) -
-           cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][j, j]) /
-        ((sum(cache[[dep.var]]$valuedNetwork[, j]) + update) - cache[[dep.var]]$valuedNetwork[j, j])
+           cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][j, j]) /
+        ((sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) + update) - cache[[dep.var]][[origin]]$valuedNetwork[j, j])
     }
     
     change <- propAfter - propBefore
@@ -216,6 +222,8 @@ staying_by_prop_bin_inflow <-
 #' to pairs of dissimilar individuals following the same path.
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -228,7 +236,7 @@ staying_by_prop_bin_inflow <-
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm. 
 #' @keywords internal
-joining_similar_avoiding_dissimilar_covar_bin <- function(dep.var = 1, 
+joining_similar_avoiding_dissimilar_covar_bin <- function(dep.var = 1, origin, 
                                                           resource.attribute.index,
                                                           state, 
                                                           cache, 
@@ -238,14 +246,14 @@ joining_similar_avoiding_dissimilar_covar_bin <- function(dep.var = 1,
                                                           update, 
                                                           getTargetContribution = FALSE){
 
-  nResources <- cache[[dep.var]]$valuedNetwork[i, j]
+  nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
   
   ### calculate target statistic
   if(getTargetContribution){
     
     if(nResources < 2) return(0)
-    nResources_1 <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ])
+    nResources_1 <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ])
     
     numerator <- nResources_1*(nResources_1 - 1) + 
       (nResources - nResources_1)*(nResources - nResources_1 - 1) -
@@ -258,8 +266,8 @@ joining_similar_avoiding_dissimilar_covar_bin <- function(dep.var = 1,
   if(update == -1){
     
     if(nResources < 2) return(0)
-    nResources_1 <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ])
+    nResources_1 <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ])
     
     attr_removed <- state[[resource.attribute.index]]$data[edge]
     if(attr_removed == 1){ # then nResources_1 > 0
@@ -274,8 +282,8 @@ joining_similar_avoiding_dissimilar_covar_bin <- function(dep.var = 1,
   if(update == 1){
     
     if(nResources < 1) return(0)
-    nResources_1 <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ]) + 1
+    nResources_1 <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ]) + 1
     
     attr_added <- state[[resource.attribute.index]]$data[edge]
     if(attr_added == 1){
@@ -303,6 +311,8 @@ joining_similar_avoiding_dissimilar_covar_bin <- function(dep.var = 1,
 #' and -1 if the absolute difference between their attributes is equal to the range).
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -315,7 +325,7 @@ joining_similar_avoiding_dissimilar_covar_bin <- function(dep.var = 1,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm. 
 #' @keywords internal
-joining_similar_avoiding_dissimilar_covar_cont <- function(dep.var = 1, 
+joining_similar_avoiding_dissimilar_covar_cont <- function(dep.var = 1, origin, 
                                                           resource.attribute.index,
                                                           state, 
                                                           cache, 
@@ -325,16 +335,16 @@ joining_similar_avoiding_dissimilar_covar_cont <- function(dep.var = 1,
                                                           update, 
                                                           getTargetContribution = FALSE){
   
-  nResources <- cache[[dep.var]]$valuedNetwork[i, j]
+  nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
   
   ### calculate target statistic
   if(getTargetContribution){
     
     if(nResources < 2) return(0)
-    allResources <- state[[dep.var]]$data[,1] == i & state[[dep.var]]$data[,2] == j
+    allResources <- state[[origin]]$data == i & state[[dep.var]]$data == j
     attributesResources <- state[[resource.attribute.index]]$data[allResources]
     attributeRange <- diff(range(state[[resource.attribute.index]]$data))
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ])
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ])
     
     distmat <- as.matrix(dist(attributesResources))
     up <- upper.tri(distmat)
@@ -349,11 +359,11 @@ joining_similar_avoiding_dissimilar_covar_cont <- function(dep.var = 1,
   if(update == -1){
     
     if(nResources < 2) return(0)
-    otherResources <- state[[dep.var]]$data[,1] == i & state[[dep.var]]$data[,2] == j &
+    otherResources <- state[[origin]]$data == i & state[[dep.var]]$data == j &
       (1:state[[dep.var]]$size[1]) != edge
     attributesResources <- state[[resource.attribute.index]]$data[otherResources]
     attributeRange <- diff(range(state[[resource.attribute.index]]$data))
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ])
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ])
     
     attr_removed <- state[[resource.attribute.index]]$data[edge]
     cont <- - sum( (attributeRange - 2*abs(attr_removed-attributesResources)) / attributeRange ) /
@@ -363,11 +373,11 @@ joining_similar_avoiding_dissimilar_covar_cont <- function(dep.var = 1,
   if(update == 1){
     
     if(nResources < 1) return(0)
-    otherResources <- state[[dep.var]]$data[,1] == i & state[[dep.var]]$data[,2] == j &
+    otherResources <- state[[origin]]$data == i & state[[dep.var]]$data == j &
         (1:state[[dep.var]]$size[1]) != edge
     attributesResources <- state[[resource.attribute.index]]$data[otherResources]
     attributeRange <- diff(range(state[[resource.attribute.index]]$data))
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ]) + 1
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ]) + 1
     
     attr_added <- state[[resource.attribute.index]]$data[edge]
     cont <- sum( (attributeRange - 2*abs(attr_added-attributesResources)) / attributeRange ) /
@@ -384,6 +394,8 @@ joining_similar_avoiding_dissimilar_covar_cont <- function(dep.var = 1,
 #' individuals following the same path.
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -396,7 +408,7 @@ joining_similar_avoiding_dissimilar_covar_cont <- function(dep.var = 1,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm. 
 #' @keywords internal
-avoiding_dissimilar_covar_bin <- function(dep.var = 1, 
+avoiding_dissimilar_covar_bin <- function(dep.var = 1, origin, 
                                           resource.attribute.index,
                                           state, 
                                           cache, 
@@ -406,14 +418,14 @@ avoiding_dissimilar_covar_bin <- function(dep.var = 1,
                                           update, 
                                           getTargetContribution = FALSE){
   
-  nResources <- cache[[dep.var]]$valuedNetwork[i, j]
+  nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
 
   ### calculate target statistic
   if(getTargetContribution){
     
     if(nResources < 2) return(0)
-    nResources_1 <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ])
+    nResources_1 <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ])
     
     numerator <- -2*nResources_1*(nResources - nResources_1)
     denominator <- origin_size - 1
@@ -425,8 +437,8 @@ avoiding_dissimilar_covar_bin <- function(dep.var = 1,
   if(update == -1){
     
     if(nResources < 2) return(0)
-    nResources_1 <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ])
+    nResources_1 <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ])
     
     attr_removed <- state[[resource.attribute.index]]$data[edge]
     if(attr_removed == 1){ # then nResources_1 > 0
@@ -441,8 +453,8 @@ avoiding_dissimilar_covar_bin <- function(dep.var = 1,
   if(update == 1){
     
     if(nResources < 1) return(0)
-    nResources_1 <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ]) + 1
+    nResources_1 <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ]) + 1
     
     attr_added <- state[[resource.attribute.index]]$data[edge]
     if(attr_added == 1){
@@ -465,6 +477,8 @@ avoiding_dissimilar_covar_bin <- function(dep.var = 1,
 #' same path that is weighted by the absolute difference between their continuous attribute. 
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -477,7 +491,7 @@ avoiding_dissimilar_covar_bin <- function(dep.var = 1,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm. 
 #' @keywords internal
-avoiding_dissimilar_covar_cont <- function(dep.var = 1, 
+avoiding_dissimilar_covar_cont <- function(dep.var = 1, origin, 
                                            resource.attribute.index,
                                            state, 
                                            cache, 
@@ -487,16 +501,16 @@ avoiding_dissimilar_covar_cont <- function(dep.var = 1,
                                            update, 
                                            getTargetContribution = FALSE){
   
-  nResources <- cache[[dep.var]]$valuedNetwork[i, j]
+  nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
   
   ### calculate target statistic
   if(getTargetContribution){
     
     if(nResources < 2) return(0)
-    allResources <- state[[dep.var]]$data[,1] == i & state[[dep.var]]$data[,2] == j
+    allResources <- state[[origin]]$data == i & state[[dep.var]]$data == j
     attributesResources <- state[[resource.attribute.index]]$data[allResources]
     attributeRange <- diff(range(state[[resource.attribute.index]]$data))
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ])
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ])
     
     distmat <- as.matrix(dist(attributesResources))
     up <- upper.tri(distmat)
@@ -511,11 +525,11 @@ avoiding_dissimilar_covar_cont <- function(dep.var = 1,
   if(update == -1){
     
     if(nResources < 2) return(0)
-    otherResources <- state[[dep.var]]$data[,1] == i & state[[dep.var]]$data[,2] == j &
+    otherResources <- state[[origin]]$data == i & state[[dep.var]]$data == j &
       (1:state[[dep.var]]$size[1]) != edge
     attributesResources <- state[[resource.attribute.index]]$data[otherResources]
     attributeRange <- diff(range(state[[resource.attribute.index]]$data))
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ])
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ])
     
     attr_removed <- state[[resource.attribute.index]]$data[edge]
     cont <- - sum( abs(attr_removed-attributesResources) ) /
@@ -525,11 +539,11 @@ avoiding_dissimilar_covar_cont <- function(dep.var = 1,
   if(update == 1){
     
     if(nResources < 1) return(0)
-    otherResources <- state[[dep.var]]$data[,1] == i & state[[dep.var]]$data[,2] == j &
+    otherResources <- state[[origin]]$data == i & state[[dep.var]]$data == j &
       (1:state[[dep.var]]$size[1]) != edge
     attributesResources <- state[[resource.attribute.index]]$data[otherResources]
     attributeRange <- diff(range(state[[resource.attribute.index]]$data))
-    origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ]) + 1
+    origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ]) + 1
     
     attr_added <- state[[resource.attribute.index]]$data[edge]
     cont <- sum( abs(attr_added-attributesResources) ) /
@@ -550,6 +564,8 @@ avoiding_dissimilar_covar_cont <- function(dep.var = 1,
 #' less they matter.
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -563,7 +579,7 @@ avoiding_dissimilar_covar_cont <- function(dep.var = 1,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm. 
 #' @keywords internal
-associativity_all_AC_covar_bin <- function(dep.var = 1, 
+associativity_all_AC_covar_bin <- function(dep.var = 1, origin, 
                                        resource.attribute.index,
                                        state, 
                                        cache, 
@@ -574,9 +590,9 @@ associativity_all_AC_covar_bin <- function(dep.var = 1,
                                        getTargetContribution = FALSE,
                                        alpha = 2){
   
-  nResources <- cache[[dep.var]]$valuedNetwork[i, j]
-  nResources_1 <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
-  origin_size <- sum(cache[[dep.var]]$valuedNetwork[i, ])
+  nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
+  nResources_1 <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
+  origin_size <- sum(cache[[dep.var]][[origin]]$valuedNetwork[i, ])
 
   ### calculate target statistic
   if(getTargetContribution){
@@ -635,6 +651,8 @@ associativity_all_AC_covar_bin <- function(dep.var = 1,
 #' less they matter.
 #' 
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -648,7 +666,7 @@ associativity_all_AC_covar_bin <- function(dep.var = 1,
 #' @return Returns the change statistic or target statistic of the effect for 
 #' internal use by the estimation algorithm. 
 #' @keywords internal
-associativity_one_AC_covar_bin <- function(dep.var = 1, 
+associativity_one_AC_covar_bin <- function(dep.var = 1, origin, 
                                            resource.attribute.index,
                                            state, 
                                            cache, 
@@ -659,8 +677,8 @@ associativity_one_AC_covar_bin <- function(dep.var = 1,
                                            getTargetContribution = FALSE,
                                            alpha = 2){
   
-  nResources <- cache[[dep.var]]$valuedNetwork[i, j]
-  nResources_1 <- cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j]
+  nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, j]
+  nResources_1 <- cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j]
   
   ### calculate target statistic
   if(getTargetContribution){

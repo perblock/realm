@@ -39,15 +39,15 @@ cppEffectSpec <- function(effects, state) {
       return(NULL)
     }
     args <- as.list(formals(effects$effectFormulas[[k]]))
-    spec <- list(name = effectName)
+    # the index of the effect's origin in the origins of the state (0-based;
+    # -1 for effects that do not depend on an origin)
+    spec <- list(name = effectName,
+                 origin = if (is.character(args$origin)) match(args$origin, state$origins) - 1L else -1L)
     if (!is.null(args$alpha)) {
       spec$alpha <- as.numeric(args$alpha)
     }
     if (!is.null(args$lambda)) {
       spec$lambda <- as.numeric(args$lambda)
-    }
-    if (!is.null(args$loop.contribution)) {
-      spec$loopContribution <- as.logical(args$loop.contribution)
     }
     if (!is.null(args$attribute.index) && !identical(args$attribute.index, quote(expr = ))) {
       spec$attribute <- as.numeric(state[[args$attribute.index]]$data)
@@ -81,17 +81,20 @@ useCppSampler <- function(effects, state) {
 }
 
 # cppChainInputs
-# the arguments of the C++ functions that describe state and cache
+# the arguments of the C++ functions that describe state and cache: the
+# destinations, the origins (named list) and the cache of the dependent variable
 cppChainInputs <- function(dep.var, state, cache) {
   state <- toListState(state, dep.var)
   cache <- toListCache(cache)
-  edgelist <- state[[dep.var]]
-  nodeName <- edgelist$nodeSet[1]
-  resourceName <- edgelist$nodeSet[3]
-  resourceNames <- names(cache[[dep.var]]$resourceNetworks)
+  nodeName <- destinationNodeSet(state, dep.var)
+  resourceName <- resourceNodeSet(state, dep.var)
+  resourceNames <- names(cache[[dep.var]]$destinations$resourceInflows)
+  origins <- lapply(state$origins, function(origin) as.integer(state[[origin]]$data))
+  names(origins) <- state$origins
   list(
     state = state,
-    edgelist = matrix(as.integer(edgelist$data), ncol = 2),
+    destinations = as.integer(state[[dep.var]]$data),
+    origins = origins,
     cache = cache[[dep.var]],
     resourceCovariates = stats::setNames(
       lapply(resourceNames, function(v) as.numeric(state[[v]]$data)), resourceNames
@@ -105,26 +108,34 @@ cppChainInputs <- function(dep.var, state, cache) {
 # runs one chain in C++; returns the statistics of each draw and the state and
 # cache (as lists) at the end of the chain, and optionally of each draw
 simulateChain <- function(dep.var, state, cache, effects, parameters,
-                          burnIn, iterations, thinning, allowLoops,
+                          burnIn, iterations, thinning,
                           multinomialProposal = FALSE, returnDraws = FALSE) {
   inputs <- cppChainInputs(dep.var, state, cache)
   res <- simulateChainCpp(
-    inputs$edgelist, inputs$cache, inputs$resourceCovariates,
+    inputs$destinations, inputs$origins, inputs$cache, inputs$resourceCovariates,
     inputs$resourceSet, inputs$nodeSet, cppEffectSpec(effects, inputs$state),
     as.numeric(parameters), as.integer(burnIn), as.integer(iterations),
-    as.integer(thinning), allowLoops, multinomialProposal, returnDraws
+    as.integer(thinning), multinomialProposal, returnDraws
   )
 
-  toState <- function(edgelistData) {
+  # the destinations, keeping the type (integer or double) of the input
+  toState <- function(destinations) {
     s <- inputs$state
-    s[[dep.var]]$data <- edgelistData
+    s[[dep.var]]$data[] <- destinations
     s
   }
+  # the cache in the form of the input: the same names, and the empty lists
+  # of resource networks as they were
   toCache <- function(cacheDepVar) {
     cacheDepVar <- cacheDepVar[names(inputs$cache)]
-    if ("resourceNetworks" %in% names(inputs$cache) &&
-        length(inputs$cache$resourceNetworks) == 0) {
-      cacheDepVar$resourceNetworks <- inputs$cache$resourceNetworks
+    for (name in names(cacheDepVar)) {
+      for (element in c("resourceInflows", "resourceNetworks")) {
+        if (element %in% names(inputs$cache[[name]]) &&
+            length(inputs$cache[[name]][[element]]) == 0) {
+          cacheDepVar[[name]][[element]] <- inputs$cache[[name]][[element]]
+        }
+      }
+      cacheDepVar[[name]] <- cacheDepVar[[name]][names(inputs$cache[[name]])]
     }
     c <- list()
     c[[dep.var]] <- cacheDepVar
@@ -134,11 +145,11 @@ simulateChain <- function(dep.var, state, cache, effects, parameters,
   statistics <- res$statistics
   colnames(statistics) <- effects$name
   out <- list(statistics = statistics,
-              state = toState(res$edgelist),
+              state = toState(res$destinations),
               cache = toCache(res$cache))
   if (returnDraws) {
     out$draws <- lapply(res$draws, function(d) {
-      list(state = toState(d$edgelist), cache = toCache(d$cache))
+      list(state = toState(d$destinations), cache = toCache(d$cache))
     })
   }
   out
@@ -148,8 +159,8 @@ simulateChain <- function(dep.var, state, cache, effects, parameters,
 # target statistics of a state in C++, as getNetworkStatistics
 cppNetworkStatistics <- function(dep.var, state, cache, effects) {
   inputs <- cppChainInputs(dep.var, state, cache)
-  statistics <- networkStatisticsCpp(inputs$edgelist, inputs$cache, inputs$resourceCovariates,
-                                     cppEffectSpec(effects, inputs$state))
+  statistics <- networkStatisticsCpp(inputs$destinations, inputs$origins, inputs$cache,
+                                     inputs$resourceCovariates, cppEffectSpec(effects, inputs$state))
   names(statistics) <- effects$name
   statistics
 }
@@ -157,23 +168,23 @@ cppNetworkStatistics <- function(dep.var, state, cache, effects) {
 # mpleObjectiveCpp
 # as mpleObjectiveR, but calculated in C++. The change statistics are computed
 # once (mpleChoiceSetsCpp in src/sampler.cpp), storing each distinct choice set
-# only once: resources with the same origin, destination and values of the
+# only once: resources with the same origins, destination and values of the
 # resource covariates used by the effects have the same change statistics.
 # If they would need more memory than getOption("realm.mpleMemoryLimit")
 # bytes (default 1 GB), they are recomputed in each call instead
 # (mpleNewtonCpp), which needs memory for one resource at a time.
-mpleObjectiveCpp <- function(dep.var, state, cache, effects, allowLoops,
+mpleObjectiveCpp <- function(dep.var, state, cache, effects,
                              memoryLimit = getOption("realm.mpleMemoryLimit", 1e9)) {
   inputs <- cppChainInputs(dep.var, state, cache)
   specs <- cppEffectSpec(effects, inputs$state)
   keyCovariates <- unique(as.character(unlist(lapply(specs, function(spec) {
     spec[["resourceAttribute"]]
   }))))
-  sets <- mpleChoiceSetsCpp(inputs$edgelist, inputs$cache, inputs$resourceCovariates,
-                            inputs$resourceSet, inputs$nodeSet, specs, keyCovariates,
-                            allowLoops, as.numeric(memoryLimit))
+  sets <- mpleChoiceSetsCpp(inputs$destinations, inputs$origins, inputs$cache,
+                            inputs$resourceCovariates, inputs$resourceSet, inputs$nodeSet,
+                            specs, keyCovariates, as.numeric(memoryLimit))
   if (!sets$possible) {
-    # an observed destination is not possible (e.g. loops without allowLoops)
+    # an observed destination is not possible (not considered when sampling)
     return(function(theta, derivatives = TRUE) list(logPL = NA_real_))
   }
   if (!sets$tooLarge) {
@@ -183,18 +194,19 @@ mpleObjectiveCpp <- function(dep.var, state, cache, effects, allowLoops,
     })
   }
   function(theta, derivatives = TRUE) {
-    mpleNewtonCpp(inputs$edgelist, inputs$cache, inputs$resourceCovariates,
-                  inputs$resourceSet, inputs$nodeSet, specs,
-                  as.numeric(theta), allowLoops, derivatives)
+    mpleNewtonCpp(inputs$destinations, inputs$origins, inputs$cache,
+                  inputs$resourceCovariates, inputs$resourceSet, inputs$nodeSet, specs,
+                  as.numeric(theta), derivatives)
   }
 }
 
 # cppEffectValues
-# change statistic and target contribution of one C++ effect, for tests
+# change statistic and target contribution of one C++ effect, for tests (i is
+# NA for effects that do not depend on an origin)
 cppEffectValues <- function(effects, k, state, cache, i, j, edge, update) {
   dep.var <- state$dep.var
   inputs <- cppChainInputs(dep.var, state, cache)
-  effectValuesCpp(inputs$edgelist, inputs$cache, inputs$resourceCovariates,
+  effectValuesCpp(inputs$destinations, inputs$origins, inputs$cache, inputs$resourceCovariates,
                   cppEffectSpec(effects, inputs$state)[[k]],
                   as.integer(i), as.integer(j), as.integer(edge), as.integer(update))
 }

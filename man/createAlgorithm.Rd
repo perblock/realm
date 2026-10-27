@@ -21,7 +21,6 @@ createAlgorithm(
   burnInN3 = NULL,
   thinningN3 = NULL,
   iterationsN3 = 500,
-  allowLoops = NULL,
   phase2Method = c("RM", "GT"),
   iterationsGT = NULL,
   maxIterationsGT = 10,
@@ -44,7 +43,6 @@ realmAlgorithmCreate(
   burnInN3 = NULL,
   thinningN3 = NULL,
   iterationsN3 = 500,
-  allowLoops = NULL,
   phase2Method = c("RM", "GT"),
   iterationsGT = NULL,
   maxIterationsGT = 10,
@@ -53,7 +51,7 @@ realmAlgorithmCreate(
 }
 \arguments{
 \item{state}{An object of class "processState.realm" that contains all relevant information about
-the outcome in the form of an edgelist, the nodesets, and covariates.}
+the outcome (the destinations), the origins, the nodesets, and covariates.}
 
 \item{effects}{An object of class "effectsList.realm" that specifies the model.}
 
@@ -119,8 +117,6 @@ of convergence.}
 least 500 (default).
 In case this value is too low, the outcome might erroneously indicate a lack
 of convergence.}
-
-\item{allowLoops}{Logical: can individuals/resources stay in their origin?}
 
 \item{phase2Method}{How the parameters are estimated in Phase 2:
 "RM" (default) uses the Robbins-Monro stochastic approximation

@@ -6,6 +6,7 @@
 \usage{
 present_relations(
   dep.var = 1,
+  origin,
   state,
   cache,
   i,
@@ -14,6 +15,10 @@ present_relations(
   update,
   getTargetContribution = FALSE
 )
+}
+\arguments{
+\item{origin}{The name of the origin (see \code{\link[=createOrigin]{createOrigin()}}) of the
+resources.}
 }
 \value{
 Returns the change statistic or target statistic of the effect for

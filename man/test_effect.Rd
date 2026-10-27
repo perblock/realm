@@ -9,6 +9,10 @@ alternative destination whether change and target statistics match.}
 \usage{
 test_effect(effectName, ...)
 }
+\arguments{
+\item{...}{Arguments of the effect, including its origin
+(origin = "origin") for effects that depend on one.}
+}
 \value{
 A data frame containing for each person in the example data:
 Origin; Destination; Suggested destination; Change statistic;
@@ -25,7 +29,7 @@ alternative destination whether change and target statistics match.
 }
 \examples{
 \donttest{
-test_loop <- test_effect("loops")
+test_loop <- test_effect("loops", origin = "origin")
 }
 }
 \keyword{internal}

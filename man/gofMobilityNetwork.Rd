@@ -7,11 +7,11 @@
 \alias{plot.gof.stats.realm}
 \title{gofMobilityNetwork}
 \usage{
-gofMobilityNetwork(ans, gofFunction, lvls = NULL, simulations = NULL)
+gofMobilityNetwork(ans, gofFunction, lvls = NULL, simulations = NULL, ...)
 
-gofDistributionNetwork(ans, gofFunction, lvls = NULL, simulations = NULL)
+gofDistributionNetwork(ans, gofFunction, lvls = NULL, simulations = NULL, ...)
 
-realmGOF(ans, gofFunction, lvls = NULL, simulations = NULL)
+realmGOF(ans, gofFunction, lvls = NULL, simulations = NULL, ...)
 
 \method{plot}{gof.stats.realm}(x, lvls = NULL, xlab = NULL, ...)
 }
@@ -31,13 +31,13 @@ by \code{gofMobilityNetwork}; if NULL, all are plotted.}
 
 \item{simulations}{outdated parameter, no need to specify}
 
+\item{...}{Additional plotting parameters passed to \code{\link[graphics:boxplot]{graphics::boxplot()}}.}
+
 \item{x}{An object of class "gof.stats.realm".}
 
 \item{xlab}{Label of the x-axis. By default "value" if the statistics are
 named by the values they refer to (as for \code{\link[=getIndegree]{getIndegree()}} and
 \code{\link[=getTieWeights]{getTieWeights()}}), otherwise none.}
-
-\item{...}{Additional plotting parameters passed to \code{\link[graphics:boxplot]{graphics::boxplot()}}.}
 }
 \value{
 The function \code{gofMobilityNetwork} returns a list containing
@@ -64,7 +64,8 @@ myGofIndegree <- gofMobilityNetwork(ans = myResDN,
 
 myGofTieWeight <- gofMobilityNetwork(ans = myResDN, 
                                      gofFunction = getTieWeights, 
-                                     lvls = 1:30)
+                                     lvls = 1:30,
+                                     origin = "origin")
 }
 \donttest{
 plot(myGofIndegree,  lvls = 20:70)

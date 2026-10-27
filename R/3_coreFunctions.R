@@ -7,7 +7,7 @@
 #' of the state and the effects.
 #'
 #' @param state An object of class "processState.realm" that contains all relevant information about
-#' the outcome in the form of an edgelist, the nodesets, and covariates.
+#' the outcome (the destinations), the origins, the nodesets, and covariates.
 #' @param effects An object of class "effectsList.realm" that specifies the model.
 #' @param multinomialProposal How should the next possible outcome in the simulation chains
 #' be sampled? If TRUE, fewer simulation steps are needed, but each simulation
@@ -59,7 +59,6 @@
 #' least 500 (default).
 #' In case this value is too low, the outcome might erroneously indicate a lack
 #' of convergence.
-#' @param allowLoops Logical: can individuals/resources stay in their origin?
 #' @param phase2Method How the parameters are estimated in Phase 2:
 #' "RM" (default) uses the Robbins-Monro stochastic approximation
 #' algorithm; "GT" uses Geyer-Thompson MCMC maximum likelihood estimation,
@@ -99,7 +98,6 @@ createAlgorithm <-
            burnInN3 = NULL,
            thinningN3 = NULL,
            iterationsN3 = 500,
-           allowLoops = NULL,
            phase2Method = c("RM", "GT"),
            iterationsGT = NULL,
            maxIterationsGT = 10,
@@ -108,8 +106,8 @@ createAlgorithm <-
     
     algorithm <- list()
     
-    nameNodeSet1 <- state[[dep.var]]$nodeSet[1]
-    nameNodeSet2 <- state[[dep.var]]$nodeSet[3]
+    nameNodeSet1 <- destinationNodeSet(state, dep.var)
+    nameNodeSet2 <- resourceNodeSet(state, dep.var)
     
     algorithm[["multinomialProposal"]] <- as.logical(multinomialProposal)
 
@@ -195,15 +193,6 @@ createAlgorithm <-
       algorithm[["thinningN3"]] <- thinningN3
     }
 
-    if (is.null(allowLoops) & any(state[[dep.var]]$data[, 1] == state[[dep.var]]$data[, 2])) {
-      algorithm[["allowLoops"]] <- TRUE
-    } else {
-      algorithm[["allowLoops"]] <- FALSE
-    }
-    if (!(is.null(allowLoops))) {
-      algorithm[["allowLoops"]] <- as.logical(allowLoops)
-    }
-
     algorithm[["phase2Method"]] <- match.arg(phase2Method)
     if (is.null(iterationsGT)) {
       algorithm[["iterationsGT"]] <- max(100, 10 * length(effects[["effectFormulas"]]))
@@ -226,75 +215,119 @@ createAlgorithm <-
 #' @rdname createAlgorithm
 realmAlgorithmCreate <- createAlgorithm
 
-#' createEdgelist
+#' createDependent
 #'
-#' Creates an edgelist object, which is the standard format of the outcome to be modelled
-#' by realm.
+#' Creates the dependent variable, the outcome to be modelled by realm: the
+#' destination of each person/resource. The origins of the resources are
+#' separate objects (see [createOrigin()]).
 #'
-#' @param el An edgelist in the form of a matrix with two columns and N rows.
-#' The first column indicates the origin of a person/resource, the second row the destination.
-#' Each row represents one observation.
-#' @param nodeSet The nodesets of the edgelists. This is a vector with three 
-#' entries referencing the names of the nodesets of locations and individuals 
-#' of the form c(location, location, individuals).
+#' @param dest A vector with the destination of each person/resource, numbered
+#' from one to the number of locations.
+#' @param nodeSet The nodesets of the dependent variable. This is a vector with
+#' two entries referencing the names of the nodesets of locations and
+#' individuals of the form c(locations, individuals).
 #' @param nodes Alternative way to specify the nodeSet by naming nodes and edges: 
-#' nodes denote the locations in the edgelist
+#' nodes denote the locations (destinations)
 #' @param edges Alternative way to specify the nodeSet by naming nodes and edges: 
-#' edges denote the individuals in the edgelist
+#' edges denote the individuals
 #' 
-#' @return An object of class "edgelist.realm".
+#' @return An object of class "dependent.realm".
 #' @export
 #'
-#' @seealso [createProcessState()]
+#' @seealso [createOrigin()], [createProcessState()]
 #'
 #' @examples
-#' # create an object of class edgelist.realm
-#' transfers <- createEdgelist(mobilityEdgelist, c("organisations", "organisations", "people"))
-createEdgelist <-
-  function(el, nodeSet = NULL, nodes = NULL, edges = NULL) {
-    if (dim(el)[2] != 2) {
-      stop("Two columns expected in edge list creation.")
+#' # the destinations of the example data
+#' transfers <- createDependent(mobilityEdgelist[, 2], c("organisations", "people"))
+createDependent <-
+  function(dest, nodeSet = NULL, nodes = NULL, edges = NULL) {
+    if (!is.null(dim(dest)) && ncol(dest) == 2) {
+      stop(paste("The dependent variable contains only the destinations.",
+                 "Create it from the second column of the edge list and the",
+                 "origins from the first column with createOrigin()."))
     }
-    if (!is.numeric(el)) {
-      el <- matrix(as.numeric(el), ncol = 2)
-    }
-    if (any(is.na(el))) {
-      stop(paste("Input data includes missing values or cannot be classified as numeric."))
-    }
-    if (min(el) != 1 || max(el) != length(unique(as.numeric(el)))) {
-      stop("Input data should be numbered from one to max. 
-           number of different locations.")
-    }
-    # update nodeSet name according to which the user specified
-    if(is.null(nodeSet)){
-      if(is.null(nodes)){
-        stop("Either nodeSet or nodes and edges need to be specified")
-      }
-      if(is.null(edges)){
-        stop("Either nodeSet or nodes and edges need to be specified")
-      }
-      nodeSet <- c(nodes, nodes, edges)
-    }
-    
-    if (length(nodeSet) != 3) {
-      stop("Three nodesets need to be specified for edgelists: nodes / nodes / edges")
-    }
-    if(!inherits(nodeSet, "character")){
-      stop("nodeSet or nodes and edges need to be class character")
-    }
-    l <- list(
-      data = el,
-      nodeSet = nodeSet,
-      size = dim(el)
-    )
-    class(l) <- "edgelist.realm"
-    l
+    locationVector(dest, nodeSet, nodes, edges, "dependent.realm")
   }
 
 #' realmDependent
 #'
-#' @rdname createEdgelist
-realmDependent <- createEdgelist
+#' @rdname createDependent
+realmDependent <- createDependent
+
+
+#' createOrigin
+#'
+#' Creates an origin: the location each person/resource comes from. A process
+#' state can contain several origins, also of different nodesets of locations;
+#' effects that depend on the origin name the origin they use.
+#'
+#' @param orig A vector with the origin of each person/resource, numbered
+#' from one to the number of locations.
+#' @param nodeSet The nodesets of the origin. This is a vector with two entries
+#' referencing the names of the nodesets of locations and individuals of the
+#' form c(locations, individuals).
+#' @param nodes Alternative way to specify the nodeSet by naming nodes and edges: 
+#' nodes denote the locations (origins)
+#' @param edges Alternative way to specify the nodeSet by naming nodes and edges: 
+#' edges denote the individuals
+#' 
+#' @return An object of class "origin.realm".
+#' @export
+#'
+#' @seealso [createDependent()], [createProcessState()]
+#'
+#' @examples
+#' # the origins of the example data
+#' origin <- createOrigin(mobilityEdgelist[, 1], c("organisations", "people"))
+createOrigin <-
+  function(orig, nodeSet = NULL, nodes = NULL, edges = NULL) {
+    if (!is.null(dim(orig)) && ncol(orig) != 1) {
+      stop("An origin is a vector with one location per person/resource.")
+    }
+    locationVector(orig, nodeSet, nodes, edges, "origin.realm")
+  }
+
+#' realmOrigin
+#'
+#' @rdname createOrigin
+realmOrigin <- createOrigin
+
+
+# locationVector
+# the dependent variable (destinations) and origins: one location per
+# resource, with the nodesets c(locations, resources)
+locationVector <- function(x, nodeSet, nodes, edges, class) {
+  x <- as.vector(x)
+  if (!is.numeric(x)) {
+    x <- as.numeric(x)
+  }
+  if (any(is.na(x))) {
+    stop(paste("Input data includes missing values or cannot be classified as numeric."))
+  }
+  if (any(x < 1) || any(x != round(x))) {
+    stop("Locations should be numbered from one to the number of locations.")
+  }
+  # update nodeSet name according to which the user specified
+  if (is.null(nodeSet)) {
+    if (is.null(nodes) || is.null(edges)) {
+      stop("Either nodeSet or nodes and edges need to be specified")
+    }
+    nodeSet <- c(nodes, edges)
+  }
+  if (length(nodeSet) != 2) {
+    stop("Two nodesets need to be specified: nodes (locations) / edges (individuals)")
+  }
+  if (!inherits(nodeSet, "character")) {
+    stop("nodeSet or nodes and edges need to be class character")
+  }
+  l <- list(
+    data = x,
+    nodeSet = nodeSet,
+    size = length(x)
+  )
+  class(l) <- class
+  l
+}
 
 
 #' createEffectsObject
@@ -314,15 +347,15 @@ realmDependent <- createEdgelist
 #' # create an effects object
 #' myEffects <- createEffectsObject(
 #'   list(
-#'     list("loops"),
-#'     list("present_relations"),
-#'     list("dyadic_covariate", attribute.index = "sameRegion"),
+#'     list("loops", origin = "origin"),
+#'     list("present_relations", origin = "origin"),
+#'     list("dyadic_covariate", origin = "origin", attribute.index = "sameRegion"),
 #'     list("alter_covariate", attribute.index = "size"),
 #'     list("resource_covar_to_node_covar",
 #'       attribute.index = "region",
 #'       resource.attribute.index = "sex"
 #'     ),
-#'     list("loops_resource_covar", resource.attribute.index = "sex")
+#'     list("loops_resource_covar", origin = "origin", resource.attribute.index = "sex")
 #'   )
 #' )
 createEffectsObject <-
@@ -343,6 +376,21 @@ createEffectsObject <-
     setParams <- lapply(effectInit, function(x) {
       x[-1]
     })
+
+    # effects that depend on the origin of the resources need one, the others
+    # cannot have one
+    for (i in seq_along(effects)) {
+      needsOrigin <- "origin" %in% names(signatures[[i]])
+      origin <- if (is.list(setParams[[i]])) setParams[[i]]$origin else NULL
+      if (needsOrigin && (!is.character(origin) || length(origin) != 1)) {
+        stop(paste0("Effect ", effectNames[[i]], " depends on the origin of the resources; ",
+                    "specify the origin, e.g. origin = \"origin\"."))
+      }
+      if (!needsOrigin && !is.null(origin)) {
+        stop(paste0("Effect ", effectNames[[i]], " does not depend on an origin; ",
+                    "remove the origin argument."))
+      }
+    }
     signatures <- mapply(
       function(s, p) {
         s[names(p)] <- p
@@ -391,20 +439,24 @@ createEffectsObject <-
 #' createNetwork
 #'
 #' Defines a network between locations, generally to be used as a predictor in the model.
-#' NOTE: The outcome variable of the model is not defined as a network, but as an edgelist!
+#' NOTE: The outcome variable of the model is not defined as a network, but as
+#' the destinations of the resources (see [createDependent()])!
 #'
-#' @param m A square matrix containing the network data.
+#' @param m A matrix containing the network data: square for a network between
+#' the locations of one nodeset, otherwise with the locations of the first
+#' nodeset in rows and of the second in columns.
 #' @param isSymmetric Currently not in use.
 #' @param isBipartite Currently not in use.
 #' @param nodeSet Which nodeset are the nodes of the network. Usually this will
-#' be the locations in the data.
+#' be the locations in the data. Two nodesets, e.g. c(origin locations,
+#' destination locations), for a network between the locations of two nodesets.
 #' @param nodes Alternative way to specify the nodeSet by naming nodes: 
-#' nodes denote the locations in the edgelist
+#' nodes denote the locations
 #'
 #' @return An object of class "network.realm".
 #' @export
 #'
-#' @seealso [createProcessState()], [createEdgelist()]
+#' @seealso [createProcessState()], [createDependent()]
 #'
 #' @examples
 #' # create an object of class network.realm
@@ -425,9 +477,6 @@ createNetwork <-
     if (any(is.na(m))) {
       stop(paste("Input matrix includes missing values or cannot be classified as numeric."))
     }
-    if (nrow(m) != ncol(m)) {
-      stop("Input matrix should have the same number of rows as columns.")
-    }
     # update nodeSet name according to which the user specified
     if(is.null(nodeSet)){
       if(is.null(nodes)){
@@ -437,6 +486,12 @@ createNetwork <-
     }
     if (length(nodeSet) == 1) {
       nodeSet <- c(nodeSet, nodeSet)
+    }
+    # a network between the locations of one nodeset is square; between two
+    # nodesets (e.g. origins in regions and destinations in organisations) it
+    # has the first nodeset in rows and the second in columns
+    if (nodeSet[1] == nodeSet[2] && nrow(m) != ncol(m)) {
+      stop("Input matrix should have the same number of rows as columns.")
     }
     if(!inherits(nodeSet, "character")){
       stop("nodeSet or nodes need to be class character")
@@ -546,9 +601,9 @@ realmNodes <- createNodeSet
 #' @param addSim Will the variable be used to model continuous homophily (e.g.,
 #' with the sim_covariate effect)? In this case, addSim needs to be set to TRUE.
 #' @param nodes Alternative way to specify the nodeSet by naming nodes or edges: 
-#' nodes denote the locations in the edgelist
+#' nodes denote the locations
 #' @param edges Alternative way to specify the nodeSet by naming nodes or edges: 
-#' edges denote the individuals in the edgelist
+#' edges denote the individuals
 #' 
 #' @return An object of class "nodeVar.realm".
 #' @export
@@ -638,26 +693,31 @@ monadicCovar <- createNodeVariable
 #'
 #' Creates the "Process state", i.e., a realm object that stores all information
 #' about the data that will be used in the estimation. This includes the
-#' outcome variable (edgelist), the nodesets, and all covariates.
+#' outcome variable (the destinations), the origins, the nodesets, and all
+#' covariates.
 #'
-#' @param elements A named list of the outcome variable (edgelist), the nodesets,
-#' and all covariates that contain the information about the data that will be 
-#' used in the estimation.
-#' @param dependentVariable The name of the outcome variable (edgelist) as
+#' @param elements A named list of the outcome variable (destinations), the
+#' origins, the nodesets, and all covariates that contain the information about
+#' the data that will be used in the estimation.
+#' @param dependentVariable The name of the outcome variable (destinations) as
 #' specified under "elements". This indicates what outcome
 #' the researcher is interested in.
 #'
-#' @return An object of class "processState.realm".
+#' @return An object of class "processState.realm". All elements of class
+#' "origin.realm" are origins; their names are stored in the element `origins`.
 #' @export
 #'
-#' @seealso [createEdgelist()], [createNodeSet()],
+#' @seealso [createDependent()], [createOrigin()], [createNodeSet()],
 #' [createNodeVariable()], [createNetwork()]
 #'
 #' @examples
 #' # Create a process state out of the mobility data objects:
 #' # create objects (which are later combined to the process state)
-#' transfers <- createEdgelist(mobilityEdgelist,
-#'   nodeSet = c("organisations", "organisations", "people")
+#' transfers <- createDependent(mobilityEdgelist[, 2],
+#'   nodeSet = c("organisations", "people")
+#' )
+#' origin <- createOrigin(mobilityEdgelist[, 1],
+#'   nodeSet = c("organisations", "people")
 #' )
 #' people <- createNodeSet(1:nrow(mobilityEdgelist))
 #' organisations <- createNodeSet(1:length(orgRegion))
@@ -672,6 +732,7 @@ monadicCovar <- createNodeVariable
 #' # combine created objects to the process state
 #' myState <- createProcessState(list(
 #'     transfers = transfers,
+#'     origin = origin,
 #'     people = people,
 #'     organisations = organisations,
 #'     sameRegion = sameRegion,
@@ -697,14 +758,16 @@ createProcessState <- function(elements, dependentVariable) {
     e <- elements[[i]]
     if (!(
       class(e) %in% c(
-        "edgelist.realm",
+        "dependent.realm",
+        "origin.realm",
         "nodeSet.realm",
         "nodeVar.realm",
         "network.realm"
       )
     )) {
       stop(paste0("Unknown element of class '", class(e), 
-           "'. Input objects should either be of classes 'edgelist.realm', 'nodeSet.realm', 'nodeVar.realm or 'network.realm'."))
+           "'. Input objects should either be of classes 'dependent.realm', 'origin.realm', ",
+           "'nodeSet.realm', 'nodeVar.realm or 'network.realm'."))
     }
 
     # TODO CLEANUP from here. What is necessary, hat should be extended?
@@ -732,20 +795,21 @@ createProcessState <- function(elements, dependentVariable) {
   # TODO implement => done by checkProcessState?
   
   elements$dep.var <- dependentVariable
+  # the origins, in the order of the elements
+  elements$origins <- names(elements)[vapply(elements, inherits, logical(1), "origin.realm")]
 
   class(elements) <- "processState.realm"
   
   checkProcessState(elements) # checks whether all input objects are correctly specified/valid
   
   
-  # define resource covariates
-  dep.var <- elements$dep.var
-  nodesets <- elements[[dep.var]]$nodeSet
-  covars <- names(elements)[!(names(elements) %in% c(dep.var, nodesets, "dep.var"))]
+  # define resource covariates: the covariates of the resources (origins,
+  # which are also defined for the resources, are not covariates)
+  covars <- names(elements)[!(names(elements) %in% nonCovariates(elements))]
   resourceCovariates <- c()
   if(length(covars) > 0){
     for (i in 1:length(covars)) {
-      if (nodesets[3] %in% elements[[covars[i]]]$nodeSet) {
+      if (resourceNodeSet(elements) %in% elements[[covars[i]]]$nodeSet) {
         resourceCovariates[length(resourceCovariates) + 1] <- covars[i]
       }
     }
@@ -782,7 +846,7 @@ createWeightedCache <-
 #' mobility tables is estimated.
 #'
 #' @param state An object of class "processState.realm" which contains all relevant information about
-#' the outcome in the form of an edgelist, the nodesets, and covariates.
+#' the outcome (the destinations), the origins, the nodesets, and covariates.
 #' @param effects An object of class "effectsList.realm" that specifies the model.
 #' @param algorithm An object of class "algorithm.realm" which specifies the algorithm used in the estimation.
 #' @param initialParameters Starting values for the parameters. If neither
@@ -890,7 +954,6 @@ estimateMobilityNetwork <-
     iterationsN3 <- algorithm$iterationsN3
     burnInN3 <- algorithm$burnInN3
     thinningN3 <- algorithm$thinningN3
-    allowLoops <- algorithm$allowLoops
 
     # set parameters to default values if not defined explicitly
     if (is.null(initialParameters)) {
@@ -917,7 +980,7 @@ estimateMobilityNetwork <-
       if (verbose) {
         cat("Calculating maximum pseudo-likelihood estimates as starting values\n")
       }
-      mple <- getMPLE(dep.var, state, cache, effects, allowLoops)
+      mple <- getMPLE(dep.var, state, cache, effects)
       if (is.null(mple)) {
         cat("Maximum pseudo-likelihood estimates not available; starting from zero\n")
       } else {
@@ -959,7 +1022,6 @@ estimateMobilityNetwork <-
           thinningN1,
           gainN1,
           multinomialProposal,
-          allowLoops,
           verbose,
           cl = cl
         )
@@ -987,7 +1049,6 @@ estimateMobilityNetwork <-
         finalIterationsGT = algorithm$finalIterationsGT,
         cl = cl,
         multinomialProposal = multinomialProposal,
-        allowLoops = allowLoops,
         verbose = verbose
       )
     } else {
@@ -1005,7 +1066,6 @@ estimateMobilityNetwork <-
         initialIterationsN2,
         cl = cl,
         multinomialProposal,
-        allowLoops,
         verbose = verbose
       )
     }
@@ -1028,7 +1088,6 @@ estimateMobilityNetwork <-
       algorithm$burnInN3,
       algorithm$thinningN3,
       cl = cl,
-      algorithm$allowLoops,
       verbose = verbose,
       returnDeps = returnDeps,
       algorithm$multinomialProposal,
@@ -1091,13 +1150,12 @@ realmEstimate <- estimateMobilityNetwork
 #' do counter-factual simulations.
 #'
 #' @param state An object of class "processState.realm" that contains all relevant information about
-#' nodesets, and covariates. Further, an edgelist of the dependent variable needs
-#' to be specified with the initial mobility network as starting value for the
+#' nodesets, and covariates. Further, the destinations of the dependent variable
+#' need to be specified with the initial mobility network as starting value for the
 #' simulation. For a large enough burn-in, any initial mobility network is allowed.
 #' @param effects An object of class "effectsList.realm" that specifies the model.
 #' @param parameters The parameters associated with the effects that shall be used
 #' in the simulations.
-#' @param allowLoops Logical: can individuals/resources stay in their origin?
 #' @param burnin The number of simulation steps that are taken before the first draw of a
 #' network is taken. A number too small will mean the first draw is influenced
 #' by the initially specified network. A recommended value for the lower bound is 3 * n_Individuals *
@@ -1120,7 +1178,6 @@ realmEstimate <- estimateMobilityNetwork
 #'   myState,
 #'   myEffects,
 #'   parameters = c(2, 1, 0.5, 0.1, -1, -0.5),
-#'   allowLoops = TRUE,
 #'   burnin = 450,
 #'   thinning = 150,
 #'   nSimulations = 10
@@ -1132,7 +1189,6 @@ simulateMobilityNetworks <-
   function(state,
            effects,
            parameters,
-           allowLoops,
            burnin,
            thinning,
            nSimulations,
@@ -1163,7 +1219,6 @@ simulateMobilityNetworks <-
         cache = cache,
         effects = effects,
         parameters = parameters,
-        allowLoops = allowLoops,
         n = burnin
       )
 
@@ -1181,7 +1236,6 @@ simulateMobilityNetworks <-
           simState,
           simCache,
           effects,
-          allowLoops = allowLoops,
           n = thinning,
           parameters = parameters
         )

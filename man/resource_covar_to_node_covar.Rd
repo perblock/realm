@@ -14,7 +14,6 @@ resource_covar_to_node_covar(
   j,
   edge,
   update,
-  loop.contribution = FALSE,
   getTargetContribution = FALSE
 )
 }

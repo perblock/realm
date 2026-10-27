@@ -2,7 +2,7 @@
 
 candidates <- createEffects(myState) |>
   addEffect(in_weights_AC, alpha = 4) |>
-  addEffect(present_relations)
+  addEffect(present_relations, origin = "origin")
 
 test_that("estimation with returnDeps stores the statistics of the model's effects", {
   dv <- myResDN$state$dep.var
@@ -50,7 +50,7 @@ test_that("results without stored statistics need modelEffects", {
   old$simulatedStatistics <- NULL
   old$observedStatistics <- NULL
   expect_error(scoreTest(old, candidates), "modelEffects")
-  expect_error(scoreTest(old, candidates, modelEffects = createEffects(myState) |> addEffect(loops)),
+  expect_error(scoreTest(old, candidates, modelEffects = createEffects(myState) |> addEffect(loops, origin = "origin")),
                "effects of the estimated model")
   expect_equal(scoreTest(old, candidates, modelEffects = myEffects)$pValues,
                scoreTest(myResDN, candidates)$pValues)
@@ -81,7 +81,7 @@ test_that("extractTraces uses the stored statistics and gives the same traces", 
   expect_equal(unname(stored$simulatedStats), unname(recomputed$simulatedStats))
   expect_identical(stored$effectNames, recomputed$effectNames)
   # other effects than those of the model are calculated from the simulations
-  other <- extractTraces(myResDN, createEffects(myState) |> addEffect(loops))
+  other <- extractTraces(myResDN, createEffects(myState) |> addEffect(loops, origin = "origin"))
   expect_length(other$observedStats, 1)
   pdf(NULL)
   on.exit(dev.off(), add = TRUE)

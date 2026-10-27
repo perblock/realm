@@ -56,7 +56,7 @@ realmEstimate(
 }
 \arguments{
 \item{state}{An object of class "processState.realm" which contains all relevant information about
-the outcome in the form of an edgelist, the nodesets, and covariates.}
+the outcome (the destinations), the origins, the nodesets, and covariates.}
 
 \item{effects}{An object of class "effectsList.realm" that specifies the model.}
 

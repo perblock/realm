@@ -82,7 +82,7 @@ test_that("parallel and serial simulations agree within Monte Carlo error", {
     runPhase3(dv, myState, myState$cache, myEffects, myResDN$estimates,
               myResDN$observedStatistics, iterationsN3 = 400,
               burnInN3 = alg$burnInN3, thinningN3 = alg$thinningN3, cl = cl,
-              allowLoops = alg$allowLoops, returnDeps = FALSE,
+              returnDeps = FALSE,
               multinomialProposal = alg$multinomialProposal, fish = FALSE)$statistics
   }
   set.seed(7)

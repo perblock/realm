@@ -1,0 +1,160 @@
+# The dependent variable holds only the destinations; origins are separate
+# objects, and effects that depend on an origin name it. A state can have
+# several origins, also of another nodeset than the destinations (then the
+# origin's network is rectangular and there are no loops).
+
+# the example state with a second origin: the region (1 or 2) of the origin
+# organisation, with a region covariate and a region x organisation network;
+# in the global environment, as addEffect() finds the state by its name there
+local({
+  regionOf <- orgRegion + 1
+  regions <- createNodeSet(2)
+  originRegion <- createOrigin(regionOf[myState$origin$data], nodeSet = c("regions", "people"))
+  regionSize <- createNodeVariable(c(5, 9), nodeSet = "regions", addSame = FALSE, addSim = FALSE)
+  sameRegionRegion <- createNetwork(outer(1:2, regionOf, "==") * 1,
+                                    nodeSet = c("regions", "organisations"))
+  for (name in c("transfers", "origin", "people", "organisations", "sameRegion",
+                 "size", "sex", "second_or")) {
+    assign(name, myState[[name]])
+  }
+  twoOrigins <- realmDataCreate(transfers, origin, originRegion, people, organisations,
+                                regions, sameRegion, size, sex, second_or, regionSize,
+                                sameRegionRegion)
+  assign("twoOrigins", twoOrigins, envir = globalenv())
+})
+
+twoOriginEffects <- createEffects(twoOrigins) |>
+  addEffect(loops, origin = "origin") |>
+  addEffect(concentration_GW, origin = "origin", alpha = 2) |>
+  addEffect(concentration_AC, origin = "originRegion", alpha = 2) |>
+  addEffect(dyadic_covariate, origin = "originRegion", node.attribute = "sameRegionRegion") |>
+  addEffect(present_relations, origin = "originRegion") |>
+  addEffect(concentration_prop_orig_cov, origin = "originRegion", node.attribute = "regionSize") |>
+  addEffect(joining_similar_avoiding_dissimilar_covar_bin, origin = "originRegion",
+            edge.attribute = "sex") |>
+  addEffect(alter_covariate, node.attribute = "size")
+
+test_that("a state can have several origins, also of another nodeset", {
+  expect_equal(twoOrigins$origins, c("origin", "originRegion"))
+  cache <- twoOrigins$cache[[twoOrigins$dep.var]]
+  expect_equal(dim(cache$originRegion$valuedNetwork), c(2, 17))
+  expect_false(cache$originRegion$sameNodeSet)
+  expect_true(cache$origin$sameNodeSet)
+  # all origins and the destinations count the same resources
+  expect_equal(colSums(cache$originRegion$valuedNetwork), cache$destinations$inflow)
+  expect_equal(colSums(cache$origin$valuedNetwork), cache$destinations$inflow)
+  expect_output(print(twoOrigins), "origin: originRegion with 2 regions")
+})
+
+test_that("C++ effects with several origins give the same values as the R effects", {
+  expect_cpp_matches_r(twoOriginEffects, state = twoOrigins)
+})
+
+test_that("C++ and R chains are identical with several origins", {
+  parameters <- c(1, 0.5, 0.3, 0.2, -0.3, 0.1, 0.2, 0.05)
+  compare_chains(twoOriginEffects, parameters, n = 3000, state = twoOrigins)
+  compare_chains(twoOriginEffects, parameters, n = 300, state = twoOrigins, multinomial = TRUE)
+})
+
+test_that("the caches of all origins match a rebuilt cache after many steps", {
+  dv <- twoOrigins$dep.var
+  resourceCovariates <- names(twoOrigins$cache[[dv]]$destinations$resourceInflows)
+  parameters <- c(1, 0.5, 0.3, 0.2, -0.3, 0.1, 0.2, 0.05)
+  for (useCpp in c(TRUE, FALSE)) {
+    old <- options(realm.useCpp = useCpp)
+    set.seed(6)
+    res <- simulateNSteps(dv, twoOrigins, twoOrigins$cache, twoOriginEffects, parameters,
+                          n = if (useCpp) 5000 else 1000)
+    options(old)
+    state <- toListState(res$state, dv)
+    expect_false(identical(state[[dv]]$data, twoOrigins[[dv]]$data))
+    expect_equal(toListCache(res$cache),
+                 createInternalCache(state, resourceCovariates = resourceCovariates),
+                 tolerance = 1e-12)
+  }
+})
+
+test_that("change statistics match target differences for a rectangular origin", {
+  dv <- twoOrigins$dep.var
+  cache <- twoOrigins$cache
+  moves <- data.frame(edge = c(1, 20, 300, 500), j_new = c(3, 17, 1, 8))
+  for (spec in list(
+    list("concentration_AC", origin = "originRegion", alpha = 2),
+    list("dyadic_covariate", origin = "originRegion", attribute.index = "sameRegionRegion"),
+    list("present_relations", origin = "originRegion"),
+    list("concentration_prop_orig_cov", origin = "originRegion", attribute.index = "regionSize"),
+    list("concentration_rankGW", origin = "originRegion", lambda = 2)
+  )) {
+    expect_change_matches(spec[[1]], spec[-1], moves, state = twoOrigins, cache = cache,
+                          resourceCovariates = names(cache[[dv]]$destinations$resourceInflows))
+  }
+})
+
+test_that("effects that depend on an origin need a valid one", {
+  expect_error(createEffects(myState) |> addEffect(loops), "specify the origin")
+  expect_error(createEffects(myState) |> addEffect(loops, origin = "nowhere"),
+               "not an origin of the state")
+  expect_error(createEffects(myState) |> addEffect(in_weights_AC, origin = "origin"),
+               "does not depend on an origin")
+  # loops need an origin with the nodeset of the destinations
+  expect_error(createEffects(twoOrigins) |> addEffect(loops, origin = "originRegion"),
+               "needs an origin with the nodeset of the destinations")
+  expect_error(createEffects(twoOrigins) |>
+                 addEffect(same_covariate, origin = "originRegion", node.attribute = "size"),
+               "needs an origin with the nodeset of the destinations")
+})
+
+test_that("covariates must have the nodesets of their role in the effect", {
+  # an origin covariate of the organisations for an origin in regions
+  expect_error(createEffects(twoOrigins) |>
+                 addEffect(concentration_prop_orig_cov, origin = "originRegion",
+                           node.attribute = "size"),
+               "must be defined for regions")
+  # a regions x organisations network for an origin in organisations
+  expect_error(createEffects(twoOrigins) |>
+                 addEffect(dyadic_covariate, origin = "origin",
+                           node.attribute = "sameRegionRegion"),
+               "must be defined for organisations x organisations")
+  # a covariate of the origins where one of the destinations is needed
+  expect_error(createEffects(twoOrigins) |> addEffect(alter_covariate, node.attribute = "regionSize"),
+               "must be defined for organisations")
+  expect_error(createEffects(twoOrigins) |>
+                 addEffect(loops_resource_covar, origin = "origin",
+                           edge.attribute = "size"),
+               "must be defined for people")
+})
+
+test_that("every effect with a node attribute declares its role", {
+  ns <- asNamespace("realm")
+  withAttribute <- Filter(function(name) {
+    f <- get(name, envir = ns)
+    is.function(f) && "attribute.index" %in% names(formals(f)) &&
+      "getTargetContribution" %in% names(formals(f))
+  }, getNamespaceExports(ns))
+  expect_setequal(withAttribute, names(attributeRoles))
+})
+
+test_that("the dependent variable and the origins are created from vectors", {
+  expect_error(createDependent(mobilityEdgelist, c("organisations", "people")),
+               "contains only the destinations")
+  expect_error(createOrigin(mobilityEdgelist, c("organisations", "people")),
+               "one location per person")
+  transfers <- createDependent(mobilityEdgelist[, 2], nodes = "organisations", edges = "people")
+  expect_s3_class(transfers, "dependent.realm")
+  expect_equal(transfers$nodeSet, c("organisations", "people"))
+  expect_error(createDependent(c(1, 2, NA), c("organisations", "people")), "missing values")
+  expect_error(createDependent(c(0, 2), c("organisations", "people")), "numbered from one")
+})
+
+test_that("a state needs an origin of the same resources", {
+  people <- createNodeSet(nrow(mobilityEdgelist))
+  organisations <- createNodeSet(17)
+  transfers <- createDependent(mobilityEdgelist[, 2], c("organisations", "people"))
+  expect_error(realmDataCreate(transfers, people, organisations), "at least one origin")
+  origin <- createOrigin(mobilityEdgelist[1:10, 1], c("organisations", "people"))
+  expect_error(realmDataCreate(transfers, origin, people, organisations),
+               "one location for each of the people")
+  destinations <- createOrigin(mobilityEdgelist[, 1], c("organisations", "people"))
+  expect_error(realmDataCreate(transfers, destinations, people, organisations),
+               "cannot be used as the name of an origin")
+})

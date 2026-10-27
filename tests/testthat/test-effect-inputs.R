@@ -11,25 +11,25 @@ test_that("effects check their covariates when they are added", {
   on.exit(rm("checkState", envir = globalenv()), add = TRUE)
 
   base <- createEffects(checkState)
-  expect_error(addEffect(base, crowding_out_prop_covar_bin, edge.attribute = "sex_counts"),
+  expect_error(addEffect(base, crowding_out_prop_covar_bin, origin = "origin", edge.attribute = "sex_counts"),
                "binary covariates")
-  expect_error(addEffect(base, staying_by_prop_bin_inflow, edge.attribute = "sex_counts"),
+  expect_error(addEffect(base, staying_by_prop_bin_inflow, origin = "origin", edge.attribute = "sex_counts"),
                "binary covariates")
 
-  expect_no_error(addEffect(base, crowding_out_prop_covar_bin, edge.attribute = "sex"))
+  expect_no_error(addEffect(base, crowding_out_prop_covar_bin, origin = "origin", edge.attribute = "sex"))
 })
 
 test_that("estimation and simulation check effect inputs against their state", {
   # effects created for one state, used with a state whose covariate is invalid
   effects <- createEffects(myState) |>
-    addEffect(crowding_out_prop_covar_bin, edge.attribute = "sex")
+    addEffect(crowding_out_prop_covar_bin, origin = "origin", edge.attribute = "sex")
   badState <- myState
   badState$sex$data[1] <- 2
 
   alg <- createAlgorithm(badState, effects)
   expect_error(estimateMobilityNetwork(badState, effects, alg), "binary covariates")
   expect_error(simulateMobilityNetworks(badState, effects, parameters = 0,
-                                        allowLoops = TRUE, burnin = 10, thinning = 10,
+                                        burnin = 10, thinning = 10,
                                         nSimulations = 1),
                "binary covariates")
 })
@@ -40,20 +40,21 @@ test_that("effects work when the dependent variable is not called 'transfers'", 
   renamed$dep.var <- "moves"
   cache <- createInternalCache(renamed, resourceCovariates = c("sex", "second_or"))
   originalCache <- createInternalCache(lililiState, resourceCovariates = c("sex", "second_or"))
-  el <- renamed$moves$data
+  orig <- renamed$origin$data
+  dest <- renamed$moves$data
 
   for (effect in c("avoiding_dissimilar_covar_cont",
                    "joining_similar_avoiding_dissimilar_covar_cont")) {
     f <- get(effect)
     for (edge in c(1, 100, 500)) {
       expect_identical(
-        f("moves", "second_or", renamed, cache, el[edge, 1], el[edge, 2], edge, -1),
-        f("transfers", "second_or", lililiState, originalCache, el[edge, 1], el[edge, 2], edge, -1)
+        f("moves", "origin", "second_or", renamed, cache, orig[edge], dest[edge], edge, -1),
+        f("transfers", "origin", "second_or", lililiState, originalCache, orig[edge], dest[edge], edge, -1)
       )
     }
     expect_identical(
-      f("moves", "second_or", renamed, cache, 1, 2, 1, 1, getTargetContribution = TRUE),
-      f("transfers", "second_or", lililiState, originalCache, 1, 2, 1, 1, getTargetContribution = TRUE)
+      f("moves", "origin", "second_or", renamed, cache, 1, 2, 1, 1, getTargetContribution = TRUE),
+      f("transfers", "origin", "second_or", lililiState, originalCache, 1, 2, 1, 1, getTargetContribution = TRUE)
     )
   }
 })

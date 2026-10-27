@@ -27,6 +27,6 @@ to explicitly model the indegree of each location.
 }
 \examples{
 myEffects <- createEffects(myState) |>
-  addEffect(loops) |>
+  addEffect(loops, origin = "origin") |>
   addDummyEffects(myState)
 }

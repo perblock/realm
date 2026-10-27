@@ -18,7 +18,7 @@
 #'
 #' @examples
 #' myEffects <- createEffects(myState) |>
-#'   addEffect(loops) |>
+#'   addEffect(loops, origin = "origin") |>
 #'   addDummyEffects(myState)
 addDummyEffects <- function(effectsObject, state){
   stateName <- deparse(substitute(state))
@@ -56,15 +56,15 @@ addFixedEffects <- addDummyEffects
 #' @examples
 #' # Create effects object and add effects
 #' myE1 <- createEffects(myState)
-#' myE1 <- addEffect(myE1, loops)
-#' myE1 <- addEffect(myE1, present_relations)
-#' myE1 <- addEffect(myE1, effectName = same_covariate, attribute.index = "region")
+#' myE1 <- addEffect(myE1, loops, origin = "origin")
+#' myE1 <- addEffect(myE1, present_relations, origin = "origin")
+#' myE1 <- addEffect(myE1, effectName = same_covariate, origin = "origin", attribute.index = "region")
 #' 
 #' # Or simpler
 #' myE1 <- createEffects(myState) |>
-#'   addEffect(loops) |>
-#'   addEffect(present_relations) |>
-#'   addEffect(same_covariate, attribute.index = "region")
+#'   addEffect(loops, origin = "origin") |>
+#'   addEffect(present_relations, origin = "origin") |>
+#'   addEffect(same_covariate, origin = "origin", attribute.index = "region")
 addEffect <- function(effectsObject, effectName, ...){
   effectName <- deparse(substitute(effectName))
   eff.state <- effectsObject$state
@@ -105,7 +105,7 @@ createEffects <- function(state){
             name = c(),
             state = deparse(substitute(state)),
             nodeset1 = state[[state$dep.var]]$nodeSet[1],
-            nodeset2 = state[[state$dep.var]]$nodeSet[3]
+            nodeset2 = state[[state$dep.var]]$nodeSet[2]
             )
   class(l) <- "effectsList.realm"
   l
@@ -118,11 +118,12 @@ createEffects <- function(state){
 #' A function to create a realm process state, i.e., 
 #' a realm object that stores all information
 #' about the data that will be used in the estimation. This includes the
-#' outcome variable (edgelist), the nodesets, and all covariates.
+#' outcome variable (destinations), the origins, the nodesets, and all covariates.
 #'
 #' @param ... The realm objects to be included in the process State. 
-#' This must include exactly one edgelist (dependent variable) and the
-#' two nodesets associated with the edgelist.
+#' This must include exactly one dependent variable (destinations, see
+#' [createDependent()]), at least one origin (see [createOrigin()]), and the
+#' nodesets associated with them.
 #' Further allowed elements are (monadic or dyadic) covariates of locations and people
 #' @param fixedEffectDummies Add dummy variable for each location (minus the first)
 #' in the process state (data object), so that fixed effects to control the
@@ -135,8 +136,11 @@ createEffects <- function(state){
 #'
 #' @examples
 #' # create objects (which are later combined to the process state)
-#' transfers <- createEdgelist(mobilityEdgelist,
-#'   nodeSet = c("organisations", "organisations", "people")
+#' transfers <- createDependent(mobilityEdgelist[, 2],
+#'   nodeSet = c("organisations", "people")
+#' )
+#' origin <- createOrigin(mobilityEdgelist[, 1],
+#'   nodeSet = c("organisations", "people")
 #' )
 #' people <- createNodeSet(1:nrow(mobilityEdgelist))
 #' organisations <- createNodeSet(1:length(orgRegion))
@@ -148,7 +152,7 @@ createEffects <- function(state){
 #' size <- createNodeVariable(orgSize, nodeSet = "organisations", addSim = TRUE)
 #' sex <- createNodeVariable(indSex, nodeSet = "people")
 #' 
-#' realmDataCreate(transfers, people, organisations, 
+#' realmDataCreate(transfers, origin, people, organisations, 
 #'                 sameRegion, region, size, sex)
 realmDataCreate <- function(..., fixedEffectDummies = FALSE){
   varnames <- unlist(lapply(substitute(list(...))[-1], deparse))
@@ -157,18 +161,18 @@ realmDataCreate <- function(..., fixedEffectDummies = FALSE){
   dep.var <- NULL
   for (i in 1:length(elements)) {
     e <- elements[[i]]
-    if (inherits(e, "edgelist.realm")) {
+    if (inherits(e, "dependent.realm")) {
       if (is.null(dep.var)) {
         dep.var <- names(elements)[i]
-        edgelist <- e
+        dependent <- e
       }
       else {
-        stop("More than one edgelist included; only one dependent variable possible")
+        stop("More than one dependent variable included; only one dependent variable possible")
       }
     }
   }
   if (is.null(dep.var)) {
-    stop("No dependent variable (edgelist) included in input objects")
+    stop("No dependent variable (see createDependent()) included in input objects")
   }
   
   if (!fixedEffectDummies){
@@ -181,11 +185,11 @@ realmDataCreate <- function(..., fixedEffectDummies = FALSE){
       vec
     }
     
-    length <- length(elements[[edgelist$nodeSet[1] ]]$ids)
+    length <- length(elements[[dependent$nodeSet[1] ]]$ids)
     dummies <- lapply(2:length, function(i) createDummy(length, i))
     
     fixedEffects <- lapply(dummies, monadicCovar, 
-                           nodes = edgelist$nodeSet[1])
+                           nodes = dependent$nodeSet[1])
     
     dummy_name <- paste0("dummy", 2:length)
     names(fixedEffects) <- dummy_name

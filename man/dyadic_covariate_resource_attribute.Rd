@@ -6,6 +6,7 @@
 \usage{
 dyadic_covariate_resource_attribute(
   dep.var = 1,
+  origin,
   attribute.index,
   resource.attribute.index,
   state,
@@ -16,6 +17,10 @@ dyadic_covariate_resource_attribute(
   update,
   getTargetContribution = FALSE
 )
+}
+\arguments{
+\item{origin}{The name of the origin (see \code{\link[=createOrigin]{createOrigin()}}) of the
+resources.}
 }
 \value{
 Returns the change statistic or target statistic of the effect for

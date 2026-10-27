@@ -6,6 +6,7 @@
 \usage{
 loops_resource_covar_node_covar(
   dep.var = 1,
+  origin,
   resource.attribute.index,
   attribute.index,
   state,
@@ -16,6 +17,10 @@ loops_resource_covar_node_covar(
   update,
   getTargetContribution = FALSE
 )
+}
+\arguments{
+\item{origin}{The name of the origin (see \code{\link[=createOrigin]{createOrigin()}}) of the
+resources.}
 }
 \value{
 Returns the change statistic or target statistic of the effect for

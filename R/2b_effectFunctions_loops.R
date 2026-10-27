@@ -5,6 +5,8 @@
 #' Do individuals stay in their location of origin, compared to going to a different location?
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -19,6 +21,7 @@
 #' @keywords internal
 loops <-
   function(dep.var = 1,
+           origin,
            state,
            cache,
            i,
@@ -27,7 +30,7 @@ loops <-
            update,
            getTargetContribution = FALSE) {
     if (getTargetContribution) {
-      return(cache[[dep.var]]$valuedNetwork[i, j] * (i == j))
+      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * (i == j))
     }
     
     if (i == j) {
@@ -45,6 +48,8 @@ loops <-
 #' this effect should be modelled alongside the loops effect.
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -59,6 +64,7 @@ loops <-
 #' internal use by the estimation algorithm.
 #' @keywords internal
 loops_AC <- function(dep.var = 1,
+                     origin,
                      state,
                      cache,
                      i,
@@ -83,7 +89,7 @@ loops_AC <- function(dep.var = 1,
   
   if (getTargetContribution) {
     if (i == j) {
-      nResources <- cache[[dep.var]]$valuedNetwork[i, i]
+      nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, i]
       
       return(g_cum(y = nResources, a = alpha))
     }
@@ -106,7 +112,7 @@ loops_AC <- function(dep.var = 1,
   }
   
   if (i == j) {
-    tie_val <- cache[[dep.var]]$valuedNetwork[i, i]
+    tie_val <- cache[[dep.var]][[origin]]$valuedNetwork[i, i]
     if(update < 0){
       return(update * g_mar(y = (tie_val + update), a = alpha))
     }
@@ -125,6 +131,8 @@ loops_AC <- function(dep.var = 1,
 #' this effect should be modelled alongside the loops effect.
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -139,6 +147,7 @@ loops_AC <- function(dep.var = 1,
 #' internal use by the estimation algorithm.
 #' @keywords internal
 loops_GW <- function(dep.var = 1,
+                     origin,
                      state,
                      cache,
                      i,
@@ -161,7 +170,7 @@ loops_GW <- function(dep.var = 1,
   
   if (getTargetContribution) {
     if (i == j) {
-      nResources <- cache[[dep.var]]$valuedNetwork[i, i]
+      nResources <- cache[[dep.var]][[origin]]$valuedNetwork[i, i]
       
       return(g_cum(y = nResources, a = alpha))
     }
@@ -182,7 +191,7 @@ loops_GW <- function(dep.var = 1,
   }
   
   if (i == j) {
-    tie_val <- cache[[dep.var]]$valuedNetwork[i, i]
+    tie_val <- cache[[dep.var]][[origin]]$valuedNetwork[i, i]
     if(update < 0){
       return(update * g_mar(y = (tie_val + update), a = alpha))
     }
@@ -201,6 +210,8 @@ loops_GW <- function(dep.var = 1,
 #' in organisations in one region less likely to change their employer?
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -216,6 +227,7 @@ loops_GW <- function(dep.var = 1,
 #' @keywords internal
 loops_node_covar <-
   function(dep.var = 1,
+           origin,
            attribute.index,
            state,
            cache,
@@ -229,7 +241,7 @@ loops_node_covar <-
     }
     
     if (getTargetContribution) {
-      return(cache[[dep.var]]$valuedNetwork[i, j] * state[[attribute.index]]$data[i])
+      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * state[[attribute.index]]$data[i])
     }
     
     return(update * state[[attribute.index]]$data[i])
@@ -244,6 +256,8 @@ loops_node_covar <-
 #' covariate’ and ‘loops by location covariate’.
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param attribute.index 
 #' @param state 
@@ -260,6 +274,7 @@ loops_node_covar <-
 #' @keywords internal
 loops_resource_covar_node_covar <-
   function(dep.var = 1,
+           origin,
            resource.attribute.index,
            attribute.index,
            state,
@@ -271,7 +286,7 @@ loops_resource_covar_node_covar <-
            getTargetContribution = FALSE) {
     # the count in the resource network on the diagonal times the node covar value
     if (getTargetContribution) {
-      return((cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j] * (i == j)) * state[[attribute.index]]$data[i])
+      return((cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j] * (i == j)) * state[[attribute.index]]$data[i])
     }
     
     # for loops; the resource attribute; times the node attribute
@@ -289,6 +304,8 @@ loops_resource_covar_node_covar <-
 #' while women are more likely to move employer? 
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -304,6 +321,7 @@ loops_resource_covar_node_covar <-
 #' @keywords internal
 loops_resource_covar <-
   function(dep.var = 1,
+           origin,
            resource.attribute.index,
            state,
            cache,
@@ -317,7 +335,7 @@ loops_resource_covar <-
     }
     
     if (getTargetContribution) {
-      return(cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j])
+      return(cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j])
     }
     
     return(update * state[[resource.attribute.index]]$data[edge])
@@ -355,8 +373,10 @@ loops_additional_origin <-
            update,
            getTargetContribution = FALSE) {
     
+    # the effect depends only on the destination: i is not used, and the target
+    # contribution is the one of destination j
     if (getTargetContribution) {
-      res_index <- (state[[dep.var]]$data[,1] == i) * (state[[dep.var]]$data[,2] == j)
+      res_index <- state[[dep.var]]$data == j
       cont <- sum(res_index * (state[[resource.attribute.index]]$data == j))
       return(cont)
     }
@@ -383,6 +403,8 @@ loops_additional_origin <-
 #' compared to going to a different location?
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param resource.attribute.index 
 #' @param state 
 #' @param cache 
@@ -397,6 +419,7 @@ loops_additional_origin <-
 #' @keywords internal
 loops_x_loops_additional_origin <-
   function(dep.var = 1,
+           origin,
            resource.attribute.index,
            state,
            cache,
@@ -410,7 +433,7 @@ loops_x_loops_additional_origin <-
       if(i != j){
         return(0)
       }
-      res_index <- (state[[dep.var]]$data[,1] == i) * (state[[dep.var]]$data[,2] == j)
+      res_index <- (state[[origin]]$data == i) * (state[[dep.var]]$data == j)
       cont <- sum(res_index * (state[[resource.attribute.index]]$data == j))
       return(cont)
     }

@@ -12,10 +12,15 @@ N_ind <- nrow(mobilityEdgelist)
 N_org <- length(unique(as.numeric(mobilityEdgelist)))
 
 # Create a process state out of the mobility data objects:
-# create objects (which are later combined to the process state)
-transfers <- realmDependent(mobilityEdgelist,
+# create objects (which are later combined to the process state).
+# The dependent variable contains the destinations (second column of the
+# mobility data), the origins are a separate object (first column)
+transfers <- realmDependent(mobilityEdgelist[, 2],
                             nodes = "organisations",
                             edges = "people")
+origin <- realmOrigin(mobilityEdgelist[, 1],
+                      nodes = "organisations",
+                      edges = "people")
 
 people <- realmEdges(N_ind)
 organisations <- realmNodes(N_org)
@@ -32,12 +37,13 @@ sex <- monadicCovar(indSex, edges = "people")
 # in the examples in the manual
 other_origin <- sample(1:17, 742, replace = T)
 resample <- as.logical(sample(0:1, 742, replace = T, prob = c(0.88, 0.12)))
-other_origin[resample] <- transfers$data[resample,2]
+other_origin[resample] <- transfers$data[resample]
 second_or <- monadicCovar(other_origin, edges = "people")
 
 
 # combine created objects to the process state
 myState <- realmDataCreate(transfers,
+                           origin,
                            people,
                            organisations,
                            sameRegion,
@@ -54,14 +60,14 @@ myState
 
 # effects object
 myEffects <- createEffects(myState) |>
-  addEffect(loops) |>
-  addEffect(concentration_AC, alpha = 4) |>
-  addEffect(dyadic_covariate, node.attribute = "sameRegion") |>
+  addEffect(loops, origin = "origin") |>
+  addEffect(concentration_AC, origin = "origin", alpha = 4) |>
+  addEffect(dyadic_covariate, origin = "origin", node.attribute = "sameRegion") |>
   addEffect(alter_covariate, node.attribute = "size") |>
   addEffect(resource_covar_to_node_covar,
             node.attribute = "region",
             edge.attribute = "sex") |>
-  addEffect(loops_resource_covar, edge.attribute = "sex")
+  addEffect(loops_resource_covar, origin = "origin", edge.attribute = "sex")
 
 # inspect the created object
 myEffects
@@ -69,13 +75,13 @@ myEffects
 # further effects object with fixed effects by location
 
 myEffects_fe <- createEffects(myState) |>
-  addEffect(loops) |>
-  addEffect(concentration_AC, alpha = 4) |>
-  addEffect(dyadic_covariate, node.attribute = "sameRegion") |>
+  addEffect(loops, origin = "origin") |>
+  addEffect(concentration_AC, origin = "origin", alpha = 4) |>
+  addEffect(dyadic_covariate, origin = "origin", node.attribute = "sameRegion") |>
   addEffect(resource_covar_to_node_covar,
             node.attribute = "region",
             edge.attribute = "sex") |>
-  addEffect(loops_resource_covar, edge.attribute = "sex") |>
+  addEffect(loops_resource_covar, origin = "origin", edge.attribute = "sex") |>
   addFixedEffects(myState)
 
 myEffects_fe
@@ -162,7 +168,8 @@ plot(myGofIndegree,  lvls = 20:70)
 
 myGofTieWeight <- realmGOF(ans = myResDN, 
                            gofFunction = getTieWeights, 
-                           lvls = 1:30)
+                           lvls = 1:30,
+                           origin = "origin")
 plot(myGofTieWeight, lvls = 1:15)
 
 
@@ -171,7 +178,6 @@ plot(myGofTieWeight, lvls = 1:15)
 mySimDN <- realmSimulate(myState,
                          myEffects,
                          parameters = c(2, 1, 0.5, 0.1, -1, -0.5),
-                         allowLoops = TRUE,
                          burnin = 45000,
                          thinning = 15000,
                          nSimulations = 10

@@ -1,14 +1,14 @@
 # C++ versions of the concentration AC/GW effects (src/effects.cpp)
 
 concentrationEffects <- createEffects(cppTestState) |>
-  addEffect(concentration_GW, alpha = 2) |>
-  addEffect(concentration_GW, alpha = 3) |>
-  addEffect(concentration_AC_dyad_covar, node.attribute = "sameRegion", alpha = 2) |>
-  addEffect(concentration_AC_dyad_covar, node.attribute = "size_similarity", alpha = 4) |>
-  addEffect(concentration_GW_dyad_covar, node.attribute = "sameRegion", alpha = 2) |>
-  addEffect(concentration_GW_dyad_covar, node.attribute = "size_similarity", alpha = 3) |>
-  addEffect(concentration_AC_resource_covar_bin, edge.attribute = "sex", alpha = 2) |>
-  addEffect(concentration_GW_resource_covar_bin, edge.attribute = "sex", alpha = 2)
+  addEffect(concentration_GW, origin = "origin", alpha = 2) |>
+  addEffect(concentration_GW, origin = "origin", alpha = 3) |>
+  addEffect(concentration_AC_dyad_covar, origin = "origin", node.attribute = "sameRegion", alpha = 2) |>
+  addEffect(concentration_AC_dyad_covar, origin = "origin", node.attribute = "size_similarity", alpha = 4) |>
+  addEffect(concentration_GW_dyad_covar, origin = "origin", node.attribute = "sameRegion", alpha = 2) |>
+  addEffect(concentration_GW_dyad_covar, origin = "origin", node.attribute = "size_similarity", alpha = 3) |>
+  addEffect(concentration_AC_resource_covar_bin, origin = "origin", edge.attribute = "sex", alpha = 2) |>
+  addEffect(concentration_GW_resource_covar_bin, origin = "origin", edge.attribute = "sex", alpha = 2)
 
 test_that("C++ concentration effects give the same values as the R effects", {
   expect_cpp_matches_r(concentrationEffects, state = cppTestState)
@@ -21,12 +21,12 @@ test_that("C++ and R chains are identical with the concentration effects", {
 })
 
 otherConcentrationEffects <- createEffects(myState) |>
-  addEffect(concentration_basic) |>
-  addEffect(concentration_basic_cube) |>
-  addEffect(concentration_prop) |>
-  addEffect(concentration_prop_AC, alpha = 2) |>
-  addEffect(concentration_prop_AC, alpha = 5) |>
-  addEffect(concentration_max)
+  addEffect(concentration_basic, origin = "origin") |>
+  addEffect(concentration_basic_cube, origin = "origin") |>
+  addEffect(concentration_prop, origin = "origin") |>
+  addEffect(concentration_prop_AC, origin = "origin", alpha = 2) |>
+  addEffect(concentration_prop_AC, origin = "origin", alpha = 5) |>
+  addEffect(concentration_max, origin = "origin")
 
 test_that("C++ basic and proportional concentration effects give the same values as R", {
   expect_cpp_matches_r(otherConcentrationEffects)
@@ -39,12 +39,12 @@ test_that("C++ and R chains are identical with the basic and proportional concen
 })
 
 restoredConcentrationEffects <- createEffects(cppTestState) |>
-  addEffect(concentration_basic_squared) |>
-  addEffect(concentration_norm) |>
-  addEffect(concentration_norm_squared) |>
-  addEffect(concentration_prop_orig_cov, node.attribute = "size") |>
-  addEffect(concentration_rankGW) |>
-  addEffect(concentration_rankGW, lambda = 1.5)
+  addEffect(concentration_basic_squared, origin = "origin") |>
+  addEffect(concentration_norm, origin = "origin") |>
+  addEffect(concentration_norm_squared, origin = "origin") |>
+  addEffect(concentration_prop_orig_cov, origin = "origin", node.attribute = "size") |>
+  addEffect(concentration_rankGW, origin = "origin") |>
+  addEffect(concentration_rankGW, origin = "origin", lambda = 1.5)
 
 test_that("C++ versions of the concentration effects restored from 1.1.0 give the same values as R", {
   expect_cpp_matches_r(restoredConcentrationEffects, state = cppTestState)

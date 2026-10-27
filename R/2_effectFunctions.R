@@ -22,12 +22,85 @@ effectInputChecks <- local({
   )
 })
 
+# the nodeset of the covariate given as attribute.index: a covariate of the
+# destinations (used for j), of the origin's locations (used for i), or a
+# dyadic covariate between both (used for [i, j])
+attributeRoles <- c(
+  alter_covariate = "destination",
+  resource_covar_to_node_covar = "destination",
+  same_covariate = "destination",
+  sim_covariate = "destination",
+  dyadic_covariate = "dyad",
+  dyadic_covariate_resource_attribute = "dyad",
+  concentration_AC_dyad_covar = "dyad",
+  concentration_GW_dyad_covar = "dyad",
+  loops_node_covar = "origin",
+  loops_resource_covar_node_covar = "origin",
+  concentration_prop_orig_cov = "origin"
+)
+
+# effects that need an origin with the same nodeset as the destinations:
+# effects defined by loops (a resource staying at its origin), and the
+# same/sim covariates, which compare the origin and destination on one
+# covariate
+sameNodeSetEffects <- c(
+  "loops", "loops_AC", "loops_GW", "loops_node_covar", "loops_resource_covar",
+  "loops_resource_covar_node_covar", "loops_x_loops_additional_origin",
+  "in_ties_loops", "crowding_out_prop_covar_bin", "staying_by_prop_bin_inflow",
+  "same_covariate", "sim_covariate"
+)
+
+# checkEffectNodeSets
+# checks that the origin of an effect is in the state, and that the effect's
+# origin and covariates have the nodesets the effect needs
+checkEffectNodeSets <- function(effectName, args, state) {
+  destinations <- destinationNodeSet(state)
+  origin <- args$origin
+  originSet <- NULL
+  if (is.character(origin)) {
+    if (!(origin %in% state$origins)) {
+      stop(paste0("Effect ", effectName, ": '", origin, "' is not an origin of the state."))
+    }
+    originSet <- state[[origin]]$nodeSet[1]
+  }
+  if (effectName %in% sameNodeSetEffects && !identical(originSet, destinations)) {
+    stop(paste0("Effect ", effectName, " needs an origin with the nodeset of the destinations (",
+                destinations, ")."))
+  }
+  role <- attributeRoles[effectName]
+  if (!is.na(role) && is.character(args$attribute.index)) {
+    expected <- switch(role,
+                       destination = destinations,
+                       origin = originSet,
+                       dyad = c(originSet, destinations))
+    actual <- state[[args$attribute.index]]$nodeSet
+    if (role == "dyad" && length(actual) == 1) {
+      actual <- c(actual, actual)
+    }
+    if (!identical(as.character(actual), expected)) {
+      stop(paste0("Effect ", effectName, ": the covariate '", args$attribute.index,
+                  "' must be defined for ", paste(expected, collapse = " x "),
+                  ", not for ", paste(actual, collapse = " x "), "."))
+    }
+  }
+  if (is.character(args$resource.attribute.index)) {
+    actual <- state[[args$resource.attribute.index]]$nodeSet
+    if (!identical(as.character(actual), resourceNodeSet(state))) {
+      stop(paste0("Effect ", effectName, ": the covariate '", args$resource.attribute.index,
+                  "' must be defined for ", resourceNodeSet(state), "."))
+    }
+  }
+  invisible(NULL)
+}
+
 # checkEffectInputs
 checkEffectInputs <- function(effects, state) {
   for (k in seq_along(effects$effectFormulas)) {
     effectName <- strsplit(effects$name[k], " ")[[1]][1]
+    args <- as.list(formals(effects$effectFormulas[[k]]))
+    checkEffectNodeSets(effectName, args, state)
     for (check in effectInputChecks[[effectName]]) {
-      check(state, as.list(formals(effects$effectFormulas[[k]])))
+      check(state, args)
     }
   }
   invisible(NULL)
@@ -41,6 +114,8 @@ checkEffectInputs <- function(effects, state) {
 #' in their current location?
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -55,6 +130,7 @@ checkEffectInputs <- function(effects, state) {
 #' @keywords internal
 in_ties_loops <-
   function(dep.var = 1,
+           origin,
            state,
            cache,
            i,
@@ -63,16 +139,16 @@ in_ties_loops <-
            update,
            getTargetContribution = FALSE) {
     if (getTargetContribution) {
-      return((cache[[dep.var]]$valuedNetwork[i, j] * (i == j)) *
-        (sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[j, j]))
+      return((cache[[dep.var]][[origin]]$valuedNetwork[i, j] * (i == j)) *
+        (sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[j, j]))
     }
 
     if (i == j) {
-      return(update * (sum(cache[[dep.var]]$valuedNetwork[, j]) - cache[[dep.var]]$valuedNetwork[j, j]))
+      return(update * (sum(cache[[dep.var]][[origin]]$valuedNetwork[, j]) - cache[[dep.var]][[origin]]$valuedNetwork[j, j]))
     }
 
     if (i != j) {
-      return(update * cache[[dep.var]]$valuedNetwork[j, j])
+      return(update * cache[[dep.var]][[origin]]$valuedNetwork[j, j])
     }
   }
 
@@ -112,9 +188,10 @@ in_weights_AC <-
       stop("Alpha parameter in in_weights_AC weights function must be positive")
     }
     
-    in_weight <- (sum(cache[[dep.var]]$valuedNetwork[,j]))
+    # the effect depends only on the destination: i is not used, and the target
+    # contribution is the one of destination j
+    in_weight <- cache[[dep.var]]$destinations$inflow[j]
     
-    # a target contribution is calculated even for unconnected i-j pairs
     if (getTargetContribution) {
       g_cum <- function(y, a){
         contr <- 0
@@ -126,7 +203,7 @@ in_weights_AC <-
         return(contr)
       }
       
-      return(g_cum(y = in_weight, a = alpha) / (length(cache[[dep.var]]$valuedNetwork[, j])))
+      return(g_cum(y = in_weight, a = alpha))
     }
 
     g_mar <- function(y, a){
@@ -181,9 +258,10 @@ in_weights_GW <-
       stop("Alpha parameter in in_weights_GW weights function must be positive")
     }
     
-    in_weight <- (sum(cache[[dep.var]]$valuedNetwork[,j]))
+    # the effect depends only on the destination: i is not used, and the target
+    # contribution is the one of destination j
+    in_weight <- cache[[dep.var]]$destinations$inflow[j]
     
-    # a target contribution is calculated even for unconnected i-j pairs
     if (getTargetContribution) {
       g_cum <- function(y, a){
         contr <- 0
@@ -193,7 +271,7 @@ in_weights_GW <-
         contr - y
       }
       
-      return(g_cum(y = in_weight, a = alpha) / (length(cache[[dep.var]]$valuedNetwork[, j])))
+      return(g_cum(y = in_weight, a = alpha))
     }
     
     g_mar <- function(y, a){
@@ -221,6 +299,8 @@ in_weights_GW <-
 #' moving to a particular destination from their origin.
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -235,6 +315,7 @@ in_weights_GW <-
 #' @keywords internal
 present_relations <-
   function(dep.var = 1,
+           origin,
            state,
            cache,
            i,
@@ -242,19 +323,19 @@ present_relations <-
            edge,
            update,
            getTargetContribution = FALSE) {
-    if (i == j) {
+    if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) {
       return(0)
     }
 
     if (getTargetContribution) {
-      return((cache[[dep.var]]$valuedNetwork[i, j] > 0) * 1)
+      return((cache[[dep.var]][[origin]]$valuedNetwork[i, j] > 0) * 1)
     }
 
-    if (cache[[dep.var]]$valuedNetwork[i, j] == 0 &&
+    if (cache[[dep.var]][[origin]]$valuedNetwork[i, j] == 0 &&
       update > 0) {
       return(1)
     }
-    if (cache[[dep.var]]$valuedNetwork[i, j] == -update &&
+    if (cache[[dep.var]][[origin]]$valuedNetwork[i, j] == -update &&
       update < 0) {
       return(-1)
     }

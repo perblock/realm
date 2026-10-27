@@ -13,7 +13,6 @@
 #' @param j 
 #' @param edge 
 #' @param update 
-#' @param loop.contribution 
 #' @param getTargetContribution 
 #'
 #' 
@@ -29,16 +28,11 @@ alter_covariate <-
            j,
            edge,
            update,
-           loop.contribution = TRUE,
            getTargetContribution = FALSE) {
-    if (!loop.contribution) {
-      if (i == j) {
-        return(0)
-      }
-    }
-    
+    # the effect depends only on the destination: i is not used, and the target
+    # contribution is the one of destination j
     if (getTargetContribution) {
-      return(state[[attribute.index]]$data[j] * cache[[dep.var]]$valuedNetwork[i, j])
+      return(state[[attribute.index]]$data[j] * cache[[dep.var]]$destinations$inflow[j])
     }
     
     return(state[[attribute.index]]$data[j] * update)
@@ -53,6 +47,8 @@ alter_covariate <-
 #' the ‘same covariate’ or the ‘covariate similarity’ effects.
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -68,6 +64,7 @@ alter_covariate <-
 #' @keywords internal
 dyadic_covariate <-
   function(dep.var = 1,
+           origin,
            attribute.index,
            state,
            cache,
@@ -76,12 +73,12 @@ dyadic_covariate <-
            edge,
            update,
            getTargetContribution = FALSE) {
-    if (i == j) {
+    if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) {
       return(0)
     }
     
     if (getTargetContribution) {
-      return(cache[[dep.var]]$valuedNetwork[i, j] * state[[attribute.index]]$data[i, j])
+      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * state[[attribute.index]]$data[i, j])
     }
     
     return(update * state[[attribute.index]]$data[i, j])
@@ -98,6 +95,8 @@ dyadic_covariate <-
 #' can be translated into dyadic covariates.
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param attribute.index 
 #' @param resource.attribute.index 
 #' @param state 
@@ -114,6 +113,7 @@ dyadic_covariate <-
 #' @keywords internal
 dyadic_covariate_resource_attribute <-
   function(dep.var = 1,
+           origin,
            attribute.index,
            resource.attribute.index,
            state,
@@ -123,12 +123,12 @@ dyadic_covariate_resource_attribute <-
            edge,
            update,
            getTargetContribution = FALSE) {
-    if (i == j) {
+    if (i == j && cache[[dep.var]][[origin]]$sameNodeSet) {
       return(0)
     }
     
     if (getTargetContribution) {
-      return(cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j] * state[[attribute.index]]$data[i, j])
+      return(cache[[dep.var]][[origin]]$resourceNetworks[[resource.attribute.index]][i, j] * state[[attribute.index]]$data[i, j])
     }
     
     return(update * state[[resource.attribute.index]]$data[edge] * state[[attribute.index]]$data[i, j])
@@ -148,7 +148,6 @@ dyadic_covariate_resource_attribute <-
 #' @param j 
 #' @param edge 
 #' @param update 
-#' @param loop.contribution 
 #' @param getTargetContribution 
 #'
 #' 
@@ -165,17 +164,12 @@ resource_covar_to_node_covar <-
            j,
            edge,
            update,
-           loop.contribution = FALSE,
            getTargetContribution = FALSE) {
-    if (!loop.contribution) {
-      if (i == j) {
-        return(0)
-      }
-    }
-    
+    # the effect depends only on the destination: i is not used, and the target
+    # contribution is the one of destination j
     if (getTargetContribution) {
       return(state[[attribute.index]]$data[j] *
-               cache[[dep.var]]$resourceNetworks[[resource.attribute.index]][i, j])
+               cache[[dep.var]]$destinations$resourceInflows[[resource.attribute.index]][j])
     }
     
     return(update * state[[resource.attribute.index]]$data[edge] * state[[attribute.index]]$data[j])
@@ -188,6 +182,8 @@ resource_covar_to_node_covar <-
 #' E.g., is mobility more likely between organisations that are located in the same region?
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -203,6 +199,7 @@ resource_covar_to_node_covar <-
 #' @keywords internal
 same_covariate <-
   function(dep.var = 1,
+           origin,
            attribute.index,
            state,
            cache,
@@ -220,7 +217,7 @@ same_covariate <-
     }
     
     if (getTargetContribution) {
-      return(cache[[dep.var]]$valuedNetwork[i, j] * state[[attribute.index]]$same[i, j])
+      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * state[[attribute.index]]$same[i, j])
     }
     
     return(update * state[[attribute.index]]$same[i, j])
@@ -233,6 +230,8 @@ same_covariate <-
 #' E.g., is mobility more likely between organisations that have a similar size?
 #'
 #' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
 #' @param attribute.index 
 #' @param state 
 #' @param cache 
@@ -248,6 +247,7 @@ same_covariate <-
 #' @keywords internal
 sim_covariate <-
   function(dep.var = 1,
+           origin,
            attribute.index,
            state,
            cache,
@@ -265,7 +265,7 @@ sim_covariate <-
     }
     
     if (getTargetContribution) {
-      return(cache[[dep.var]]$valuedNetwork[i, j] * state[[attribute.index]]$sim[i, j])
+      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * state[[attribute.index]]$sim[i, j])
     }
     
     return(update * state[[attribute.index]]$sim[i, j])

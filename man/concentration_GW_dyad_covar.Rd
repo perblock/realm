@@ -6,6 +6,7 @@
 \usage{
 concentration_GW_dyad_covar(
   dep.var = 1,
+  origin,
   attribute.index,
   state,
   cache,
@@ -16,6 +17,10 @@ concentration_GW_dyad_covar(
   getTargetContribution = FALSE,
   alpha = 2
 )
+}
+\arguments{
+\item{origin}{The name of the origin (see \code{\link[=createOrigin]{createOrigin()}}) of the
+resources.}
 }
 \value{
 Returns the change statistic or target statistic of the effect for

@@ -10,7 +10,6 @@ simulateMobilityNetworks(
   state,
   effects,
   parameters,
-  allowLoops,
   burnin,
   thinning,
   nSimulations,
@@ -21,7 +20,6 @@ simulateDistributionNetworks(
   state,
   effects,
   parameters,
-  allowLoops,
   burnin,
   thinning,
   nSimulations,
@@ -32,7 +30,6 @@ realmSimulate(
   state,
   effects,
   parameters,
-  allowLoops,
   burnin,
   thinning,
   nSimulations,
@@ -41,16 +38,14 @@ realmSimulate(
 }
 \arguments{
 \item{state}{An object of class "processState.realm" that contains all relevant information about
-nodesets, and covariates. Further, an edgelist of the dependent variable needs
-to be specified with the initial mobility network as starting value for the
+nodesets, and covariates. Further, the destinations of the dependent variable
+need to be specified with the initial mobility network as starting value for the
 simulation. For a large enough burn-in, any initial mobility network is allowed.}
 
 \item{effects}{An object of class "effectsList.realm" that specifies the model.}
 
 \item{parameters}{The parameters associated with the effects that shall be used
 in the simulations.}
-
-\item{allowLoops}{Logical: can individuals/resources stay in their origin?}
 
 \item{burnin}{The number of simulation steps that are taken before the first draw of a
 network is taken. A number too small will mean the first draw is influenced
@@ -82,7 +77,6 @@ mySimDN <- simulateMobilityNetworks(
   myState,
   myEffects,
   parameters = c(2, 1, 0.5, 0.1, -1, -0.5),
-  allowLoops = TRUE,
   burnin = 450,
   thinning = 150,
   nSimulations = 10

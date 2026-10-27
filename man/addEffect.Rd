@@ -24,13 +24,13 @@ A function to add additional effects to a realm effects object
 \examples{
 # Create effects object and add effects
 myE1 <- createEffects(myState)
-myE1 <- addEffect(myE1, loops)
-myE1 <- addEffect(myE1, present_relations)
-myE1 <- addEffect(myE1, effectName = same_covariate, attribute.index = "region")
+myE1 <- addEffect(myE1, loops, origin = "origin")
+myE1 <- addEffect(myE1, present_relations, origin = "origin")
+myE1 <- addEffect(myE1, effectName = same_covariate, origin = "origin", attribute.index = "region")
 
 # Or simpler
 myE1 <- createEffects(myState) |>
-  addEffect(loops) |>
-  addEffect(present_relations) |>
-  addEffect(same_covariate, attribute.index = "region")
+  addEffect(loops, origin = "origin") |>
+  addEffect(present_relations, origin = "origin") |>
+  addEffect(same_covariate, origin = "origin", attribute.index = "region")
 }

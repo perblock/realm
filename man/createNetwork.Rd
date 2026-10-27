@@ -22,24 +22,28 @@ dyadicCovar(
 )
 }
 \arguments{
-\item{m}{A square matrix containing the network data.}
+\item{m}{A matrix containing the network data: square for a network between
+the locations of one nodeset, otherwise with the locations of the first
+nodeset in rows and of the second in columns.}
 
 \item{isSymmetric}{Currently not in use.}
 
 \item{isBipartite}{Currently not in use.}
 
 \item{nodeSet}{Which nodeset are the nodes of the network. Usually this will
-be the locations in the data.}
+be the locations in the data. Two nodesets, e.g. c(origin locations,
+destination locations), for a network between the locations of two nodesets.}
 
 \item{nodes}{Alternative way to specify the nodeSet by naming nodes:
-nodes denote the locations in the edgelist}
+nodes denote the locations}
 }
 \value{
 An object of class "network.realm".
 }
 \description{
 Defines a network between locations, generally to be used as a predictor in the model.
-NOTE: The outcome variable of the model is not defined as a network, but as an edgelist!
+NOTE: The outcome variable of the model is not defined as a network, but as
+the destinations of the resources (see \code{\link[=createDependent]{createDependent()}})!
 }
 \examples{
 # create an object of class network.realm
@@ -47,5 +51,5 @@ sameRegion <- outer(orgRegion, orgRegion, "==") * 1
 sameRegion <- createNetwork(sameRegion, nodeSet = c("organisations", "organisations"))
 }
 \seealso{
-\code{\link[=createProcessState]{createProcessState()}}, \code{\link[=createEdgelist]{createEdgelist()}}
+\code{\link[=createProcessState]{createProcessState()}}, \code{\link[=createDependent]{createDependent()}}
 }

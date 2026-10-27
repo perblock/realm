@@ -2,22 +2,22 @@
 # covariate-based effects (src/effects.cpp)
 
 otherEffects <- createEffects(cppTestState) |>
-  addEffect(same_covariate, node.attribute = "region") |>
-  addEffect(sim_covariate, node.attribute = "size") |>
-  addEffect(dyadic_covariate_resource_attribute, node.attribute = "sameRegion",
+  addEffect(same_covariate, origin = "origin", node.attribute = "region") |>
+  addEffect(sim_covariate, origin = "origin", node.attribute = "size") |>
+  addEffect(dyadic_covariate_resource_attribute, origin = "origin", node.attribute = "sameRegion",
             edge.attribute = "sex") |>
-  addEffect(dyadic_covariate_resource_attribute, node.attribute = "size_similarity",
+  addEffect(dyadic_covariate_resource_attribute, origin = "origin", node.attribute = "size_similarity",
             edge.attribute = "second_or") |>
-  addEffect(in_ties_loops) |>
-  addEffect(present_relations)
+  addEffect(in_ties_loops, origin = "origin") |>
+  addEffect(present_relations, origin = "origin")
 
 covariateEffects <- createEffects(cppTestState) |>
-  addEffect(staying_by_prop_bin_inflow, edge.attribute = "sex") |>
-  addEffect(crowding_out_prop_covar_bin, edge.attribute = "sex") |>
-  addEffect(joining_similar_avoiding_dissimilar_covar_bin, edge.attribute = "sex") |>
-  addEffect(avoiding_dissimilar_covar_bin, edge.attribute = "sex") |>
-  addEffect(joining_similar_avoiding_dissimilar_covar_cont, edge.attribute = "second_or") |>
-  addEffect(avoiding_dissimilar_covar_cont, edge.attribute = "second_or")
+  addEffect(staying_by_prop_bin_inflow, origin = "origin", edge.attribute = "sex") |>
+  addEffect(crowding_out_prop_covar_bin, origin = "origin", edge.attribute = "sex") |>
+  addEffect(joining_similar_avoiding_dissimilar_covar_bin, origin = "origin", edge.attribute = "sex") |>
+  addEffect(avoiding_dissimilar_covar_bin, origin = "origin", edge.attribute = "sex") |>
+  addEffect(joining_similar_avoiding_dissimilar_covar_cont, origin = "origin", edge.attribute = "second_or") |>
+  addEffect(avoiding_dissimilar_covar_cont, origin = "origin", edge.attribute = "second_or")
 
 test_that("C++ exogenous, in-ties and present-relations effects give the same values as R", {
   expect_cpp_matches_r(otherEffects, state = cppTestState)

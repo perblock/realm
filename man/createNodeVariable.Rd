@@ -33,10 +33,10 @@ monadicCovar(
 \item{nodeSet}{The nodeset to which the covariate applies.}
 
 \item{nodes}{Alternative way to specify the nodeSet by naming nodes or edges:
-nodes denote the locations in the edgelist}
+nodes denote the locations}
 
 \item{edges}{Alternative way to specify the nodeSet by naming nodes or edges:
-edges denote the individuals in the edgelist}
+edges denote the individuals}
 
 \item{addSame}{Will the variable be used to model categorical homophily (e.g.,
 with the same_covariate effect)? In this case, addSame needs to be set to TRUE.}
