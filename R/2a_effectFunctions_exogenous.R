@@ -188,6 +188,13 @@ resource_covar_to_node_covar <-
 #' 
 #' Is mobility more likely between locations that are identical on some attribute v? 
 #' E.g., is mobility more likely between organisations that are located in the same region?
+#' 
+#' The attribute of the destination (node.attribute) is compared with the
+#' attribute of the origin location. Without origin.attribute, this is the same
+#' covariate (which needs the 'same' matrix, see [createNodeVariable()]); with
+#' origin.attribute, a covariate of the origin's locations, which is needed for
+#' an origin of another nodeset than the destinations (e.g. the region of
+#' origin compared with the region of the destination organisation).
 #'
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
@@ -195,7 +202,10 @@ resource_covar_to_node_covar <-
 #' @param exclude.loops Should loops (resources staying at their origin) be
 #' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
 #' Loops exist only for an origin with the nodeset of the destinations.
-#' @param attribute.index 
+#' @param attribute.index The covariate of the destinations (node.attribute in
+#' [addEffect()]).
+#' @param origin.attribute.index The covariate of the origin's locations
+#' (origin.attribute in [addEffect()]); if NULL, attribute.index is used.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -218,21 +228,27 @@ same_covariate <-
            j,
            edge,
            update,
+           origin.attribute.index = NULL,
            exclude.loops = FALSE,
            getTargetContribution = FALSE) {
     if (exclude.loops && i == j) {
       return(0)
     }
     
-    if (is.null(state[[attribute.index]]$same)) {
-      stop("Effect same_covariate expects covariates with a 'same' attribute.")
+    if (is.null(origin.attribute.index)) {
+      if (is.null(state[[attribute.index]]$same)) {
+        stop("Effect same_covariate expects covariates with a 'same' attribute.")
+      }
+      same <- state[[attribute.index]]$same[i, j]
+    } else {
+      same <- (state[[origin.attribute.index]]$data[i] == state[[attribute.index]]$data[j]) * 1
     }
     
     if (getTargetContribution) {
-      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * state[[attribute.index]]$same[i, j])
+      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * same)
     }
     
-    return(update * state[[attribute.index]]$same[i, j])
+    return(update * same)
   }
 
 
@@ -240,6 +256,13 @@ same_covariate <-
 #' 
 #' Is mobility more likely between locations that are similar on some attribute v? 
 #' E.g., is mobility more likely between organisations that have a similar size?
+#' 
+#' The similarity of the attribute a of the origin location and the attribute b
+#' of the destination is 1 - |a - b| / range, with the range of the values of
+#' both. Without origin.attribute, both are the same covariate (which needs the
+#' 'sim' matrix, see [createNodeVariable()]); with origin.attribute, a
+#' covariate of the origin's locations, which is needed for an origin of
+#' another nodeset than the destinations.
 #'
 #' @param dep.var 
 #' @param origin The name of the origin (see [createOrigin()]) of the
@@ -247,7 +270,10 @@ same_covariate <-
 #' @param exclude.loops Should loops (resources staying at their origin) be
 #' excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
 #' Loops exist only for an origin with the nodeset of the destinations.
-#' @param attribute.index 
+#' @param attribute.index The covariate of the destinations (node.attribute in
+#' [addEffect()]).
+#' @param origin.attribute.index The covariate of the origin's locations
+#' (origin.attribute in [addEffect()]); if NULL, attribute.index is used.
 #' @param state 
 #' @param cache 
 #' @param i 
@@ -270,20 +296,30 @@ sim_covariate <-
            j,
            edge,
            update,
+           origin.attribute.index = NULL,
            exclude.loops = FALSE,
            getTargetContribution = FALSE) {
     if (exclude.loops && i == j) {
       return(0)
     }
     
-    if (is.null(state[[attribute.index]]$sim)) {
-      stop("Effect sim_covariate expects covariates with a 'sim' attribute.")
+    if (is.null(origin.attribute.index)) {
+      if (is.null(state[[attribute.index]]$sim)) {
+        stop("Effect sim_covariate expects covariates with a 'sim' attribute.")
+      }
+      sim <- state[[attribute.index]]$sim[i, j]
+    } else {
+      # as the 'sim' matrix of createNodeVariable(), with the range of both
+      # covariates
+      a <- state[[origin.attribute.index]]$data
+      b <- state[[attribute.index]]$data
+      valueRange <- range(c(a, b))
+      sim <- 1 - abs(a[i] - b[j]) / (valueRange[2] - valueRange[1])
     }
     
     if (getTargetContribution) {
-      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * state[[attribute.index]]$sim[i, j])
+      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * sim)
     }
     
-    return(update * state[[attribute.index]]$sim[i, j])
+    return(update * sim)
   }
-

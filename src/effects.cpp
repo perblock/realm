@@ -542,6 +542,39 @@ class ConcentrationRankGW : public Effect {
 // matrix of a node covariate) times the number of resources
 // (also used for dyadic_covariate, which has the same form)
 
+// same_covariate, sim_covariate with origin.attribute: the covariate a of the
+// origin's locations compared with the covariate b of the destinations
+class CovariateComparison : public Effect {
+  bool similarity;  // false: same_covariate
+  std::vector<double> a, b;
+  double valueRange;
+  double value(int i, int j) const {
+    if (!similarity) return (a[i] == b[j]) * 1;
+    return 1 - std::abs(a[i] - b[j]) / valueRange;
+  }
+ public:
+  CovariateComparison(bool sim, std::vector<double> origins, std::vector<double> destinations)
+    : similarity(sim), a(std::move(origins)), b(std::move(destinations)) {
+    // R: range(c(a, b))
+    double lo = R_PosInf, hi = R_NegInf;
+    for (const std::vector<double>* v : {&a, &b}) {
+      for (double x : *v) {
+        lo = std::min(lo, x);
+        hi = std::max(hi, x);
+      }
+    }
+    valueRange = hi - lo;
+  }
+  double change(const Chain& ch, int i, int j, int edge, int update) const override {
+    if (excludeLoops && i == j) return 0;
+    return update * value(i, j);
+  }
+  double target(const Chain& ch, int i, int j) const override {
+    if (excludeLoops && i == j) return 0;
+    return net(ch).v(i, j) * value(i, j);
+  }
+};
+
 // dyadic_covariate_resource_attribute
 class DyadicCovariateResourceAttribute : public Effect {
   std::vector<double> dyad;
@@ -839,6 +872,12 @@ std::unique_ptr<Effect> makeEffectFor(const Rcpp::List& spec, const Chain& chain
     return E(new ConcentrationProp(true, alphaOf(spec, "concentration_prop_AC")));
   }
   if (name == "same_covariate" || name == "sim_covariate") {
+    if (spec.containsElementNamed("originAttribute")) {
+      Rcpp::NumericVector a = spec["originAttribute"];
+      return E(new CovariateComparison(name == "sim_covariate",
+                                       std::vector<double>(a.begin(), a.end()),
+                                       attributeOf(spec)));
+    }
     return E(new DyadicCovariate(attributeOf(spec)));
   }
   if (name == "dyadic_covariate_resource_attribute") {

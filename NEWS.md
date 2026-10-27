@@ -43,3 +43,10 @@
   `present_relations`) now include them by default; the new argument
   `exclude.loops = TRUE` excludes them as before. The example data are
   re-estimated.
+- `same_covariate` and `sim_covariate` have the argument `origin.attribute`
+  (in `addEffect()`): a covariate of the origin's locations that is compared
+  with the covariate of the destinations (`node.attribute`). It is needed for
+  an origin of another nodeset than the destinations, e.g.
+  `addEffect(same_covariate, origin = "originRegion", node.attribute =
+  "orgRegion", origin.attribute = "regionId")`. The similarity uses the range
+  of both covariates. Without it, the effects work as before.

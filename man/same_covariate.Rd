@@ -14,6 +14,7 @@ same_covariate(
   j,
   edge,
   update,
+  origin.attribute.index = NULL,
   exclude.loops = FALSE,
   getTargetContribution = FALSE
 )
@@ -21,6 +22,12 @@ same_covariate(
 \arguments{
 \item{origin}{The name of the origin (see \code{\link[=createOrigin]{createOrigin()}}) of the
 resources.}
+
+\item{attribute.index}{The covariate of the destinations (node.attribute in
+\code{\link[=addEffect]{addEffect()}}).}
+
+\item{origin.attribute.index}{The covariate of the origin's locations
+(origin.attribute in \code{\link[=addEffect]{addEffect()}}); if NULL, attribute.index is used.}
 
 \item{exclude.loops}{Should loops (resources staying at their origin) be
 excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
@@ -33,5 +40,13 @@ internal use by the estimation algorithm.
 \description{
 Is mobility more likely between locations that are identical on some attribute v?
 E.g., is mobility more likely between organisations that are located in the same region?
+}
+\details{
+The attribute of the destination (node.attribute) is compared with the
+attribute of the origin location. Without origin.attribute, this is the same
+covariate (which needs the 'same' matrix, see \code{\link[=createNodeVariable]{createNodeVariable()}}); with
+origin.attribute, a covariate of the origin's locations, which is needed for
+an origin of another nodeset than the destinations (e.g. the region of
+origin compared with the region of the destination organisation).
 }
 \keyword{internal}

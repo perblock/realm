@@ -12,8 +12,11 @@ effect should be added.}
 
 \item{effectName}{The name of the effect that should be added (e.g. loops).}
 
-\item{...}{Additional parameters of the effect, for example alpha,
-attribute.index, or resource.attribute.index}
+\item{...}{Additional parameters of the effect, for example the origin
+(for effects that depend on one), alpha, node.attribute (a covariate of the
+locations, or a dyadic covariate), edge.attribute (a covariate of the
+resources), or origin.attribute (a covariate of the origin's locations, for
+same_covariate and sim_covariate).}
 }
 \value{
 An object of type effectsList.realm

@@ -14,6 +14,7 @@ sim_covariate(
   j,
   edge,
   update,
+  origin.attribute.index = NULL,
   exclude.loops = FALSE,
   getTargetContribution = FALSE
 )
@@ -21,6 +22,12 @@ sim_covariate(
 \arguments{
 \item{origin}{The name of the origin (see \code{\link[=createOrigin]{createOrigin()}}) of the
 resources.}
+
+\item{attribute.index}{The covariate of the destinations (node.attribute in
+\code{\link[=addEffect]{addEffect()}}).}
+
+\item{origin.attribute.index}{The covariate of the origin's locations
+(origin.attribute in \code{\link[=addEffect]{addEffect()}}); if NULL, attribute.index is used.}
 
 \item{exclude.loops}{Should loops (resources staying at their origin) be
 excluded from the statistic? Defaults to FALSE, i.e. loops contribute.
@@ -33,5 +40,13 @@ internal use by the estimation algorithm.
 \description{
 Is mobility more likely between locations that are similar on some attribute v?
 E.g., is mobility more likely between organisations that have a similar size?
+}
+\details{
+The similarity of the attribute a of the origin location and the attribute b
+of the destination is 1 - |a - b| / range, with the range of the values of
+both. Without origin.attribute, both are the same covariate (which needs the
+'sim' matrix, see \code{\link[=createNodeVariable]{createNodeVariable()}}); with origin.attribute, a
+covariate of the origin's locations, which is needed for an origin of
+another nodeset than the destinations.
 }
 \keyword{internal}

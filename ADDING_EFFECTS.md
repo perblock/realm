@@ -115,7 +115,10 @@ Rules:
   Declare in `attributeRoles` (`R/2_effectFunctions.R`) whether
   `attribute.index` is a covariate of the destinations (used with `j`), of the
   origin's locations (used with `i`), or a dyadic covariate (`[i, j]`); the
-  covariate's nodesets are checked against this. Further parameters (such as
+  covariate's nodesets are checked against this. An effect that compares a
+  covariate of the origin's locations with one of the destinations takes it as
+  `origin.attribute.index` (`origin.attribute` in `addEffect()`; see
+  `same_covariate` and `originAttributeEffects`). Further parameters (such as
   `alpha`) get defaults.
 - **Don't check the input data in the function.** Effects are called millions of
   times. Checks that a covariate is symmetric, binary, etc. go into

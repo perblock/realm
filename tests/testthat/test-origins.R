@@ -17,9 +17,12 @@ local({
                  "size", "sex", "second_or")) {
     assign(name, myState[[name]])
   }
+  # the region as a covariate of the regions and of the organisations
+  regionId <- createNodeVariable(1:2, nodeSet = "regions", addSame = FALSE, addSim = FALSE)
+  orgRegionId <- createNodeVariable(regionOf, nodeSet = "organisations")
   twoOrigins <- realmDataCreate(transfers, origin, originRegion, people, organisations,
                                 regions, sameRegion, size, sex, second_or, regionSize,
-                                sameRegionRegion)
+                                sameRegionRegion, regionId, orgRegionId)
   assign("twoOrigins", twoOrigins, envir = globalenv())
 })
 
@@ -90,6 +93,62 @@ test_that("change statistics match target differences for a rectangular origin",
   }
 })
 
+# same_covariate and sim_covariate comparing a covariate of the regions of
+# origin with one of the destination organisations
+comparisonEffects <- createEffects(twoOrigins) |>
+  addEffect(same_covariate, origin = "originRegion", node.attribute = "orgRegionId",
+            origin.attribute = "regionId") |>
+  addEffect(sim_covariate, origin = "originRegion", node.attribute = "size",
+            origin.attribute = "regionSize") |>
+  addEffect(same_covariate, origin = "origin", node.attribute = "orgRegionId",
+            origin.attribute = "orgRegionId", exclude.loops = TRUE)
+
+test_that("same and sim covariates compare covariates of the origin and the destinations", {
+  expect_cpp_matches_r(comparisonEffects, state = twoOrigins)
+  compare_chains(comparisonEffects, c(0.5, 0.3, -0.2), n = 3000, state = twoOrigins)
+  compare_chains(comparisonEffects, c(0.5, 0.3, -0.2), n = 300, state = twoOrigins,
+                 multinomial = TRUE)
+  dv <- twoOrigins$dep.var
+  moves <- data.frame(edge = c(1, 20, 300, 500), j_new = c(3, 17, 1, 8))
+  for (spec in list(
+    list("same_covariate", origin = "originRegion", attribute.index = "orgRegionId",
+         origin.attribute.index = "regionId"),
+    list("sim_covariate", origin = "originRegion", attribute.index = "size",
+         origin.attribute.index = "regionSize")
+  )) {
+    expect_change_matches(spec[[1]], spec[-1], moves, state = twoOrigins, cache = twoOrigins$cache,
+                          resourceCovariates = names(twoOrigins$cache[[dv]]$destinations$resourceInflows))
+  }
+  # same region of origin and destination, as the dyadic covariate
+  dyadic <- createEffects(twoOrigins) |>
+    addEffect(dyadic_covariate, origin = "originRegion", node.attribute = "sameRegionRegion")
+  expect_equal(unname(getNetworkStatistics(dv, twoOrigins, twoOrigins$cache, comparisonEffects)[1]),
+               unname(getNetworkStatistics(dv, twoOrigins, twoOrigins$cache, dyadic)))
+})
+
+test_that("with the same covariate for both, same and sim equal the stored matrices", {
+  dv <- cppTestState$dep.var
+  for (useCpp in c(TRUE, FALSE)) {
+    old <- options(realm.useCpp = useCpp)
+    for (effect in c("same_covariate", "sim_covariate")) {
+      attribute <- if (effect == "same_covariate") "region" else "size"
+      stored <- createEffectsObject(list(list(effect, origin = "origin", attribute.index = attribute)),
+                                    checkProcessState = cppTestState)
+      compared <- createEffectsObject(list(list(effect, origin = "origin", attribute.index = attribute,
+                                                origin.attribute.index = attribute)),
+                                      checkProcessState = cppTestState)
+      expect_identical(unname(getNetworkStatistics(dv, cppTestState, cppTestState$cache, stored)),
+                       unname(getNetworkStatistics(dv, cppTestState, cppTestState$cache, compared)))
+      set.seed(4)
+      a <- simulateNSteps(dv, cppTestState, cppTestState$cache, stored, 0.5, n = 2000)
+      set.seed(4)
+      b <- simulateNSteps(dv, cppTestState, cppTestState$cache, compared, 0.5, n = 2000)
+      expect_identical(toListState(a$state, dv)[[dv]]$data, toListState(b$state, dv)[[dv]]$data)
+    }
+    options(old)
+  }
+})
+
 test_that("effects that depend on an origin need a valid one", {
   expect_error(createEffects(myState) |> addEffect(loops), "specify the origin")
   expect_error(createEffects(myState) |> addEffect(loops, origin = "nowhere"),
@@ -99,9 +158,18 @@ test_that("effects that depend on an origin need a valid one", {
   # loops need an origin with the nodeset of the destinations
   expect_error(createEffects(twoOrigins) |> addEffect(loops, origin = "originRegion"),
                "needs an origin with the nodeset of the destinations")
+  # same and sim covariates need a covariate of the origin's locations
   expect_error(createEffects(twoOrigins) |>
                  addEffect(same_covariate, origin = "originRegion", node.attribute = "size"),
-               "needs an origin with the nodeset of the destinations")
+               "specify the covariate of its locations with origin.attribute")
+  expect_error(createEffects(twoOrigins) |>
+                 addEffect(sim_covariate, origin = "originRegion", node.attribute = "size",
+                           origin.attribute = "size"),
+               "must be defined for regions")
+  expect_error(createEffects(twoOrigins) |>
+                 addEffect(sim_covariate, origin = "originRegion", node.attribute = "regionSize",
+                           origin.attribute = "regionSize"),
+               "must be defined for organisations")
 })
 
 test_that("loops can only be excluded for an origin with the nodeset of the destinations", {

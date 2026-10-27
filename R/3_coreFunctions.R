@@ -417,7 +417,7 @@ createEffectsObject <-
     if (!is.null(checkProcessState)) {
       stateNames <- names(checkProcessState)
       params <- unlist(signatures)
-      refs <- unique(params[names(params) == "attribute.index"])
+      refs <- unique(params[names(params) %in% c("attribute.index", "origin.attribute.index")])
       for (r in refs) {
         if (!(r %in% stateNames)) {
           stop(paste("Unknown process state reference:", r))

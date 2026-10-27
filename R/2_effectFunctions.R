@@ -49,15 +49,18 @@ attributeRoles <- c(
 )
 
 # effects that need an origin with the same nodeset as the destinations:
-# effects defined by loops (a resource staying at its origin), and the
-# same/sim covariates, which compare the origin and destination on one
-# covariate
+# effects defined by loops (a resource staying at its origin)
 sameNodeSetEffects <- c(
   "loops", "loops_AC", "loops_GW", "loops_node_covar", "loops_resource_covar",
   "loops_resource_covar_node_covar", "loops_x_loops_additional_origin",
-  "in_ties_loops", "crowding_out_prop_covar_bin", "staying_by_prop_bin_inflow",
-  "same_covariate", "sim_covariate"
+  "in_ties_loops", "crowding_out_prop_covar_bin", "staying_by_prop_bin_inflow"
 )
+
+# effects that compare a covariate of the origin's locations
+# (origin.attribute.index) with one of the destinations (attribute.index); for
+# an origin of another nodeset than the destinations, the origin's covariate
+# must be given
+originAttributeEffects <- c("same_covariate", "sim_covariate")
 
 # checkEffectNodeSets
 # checks that the origin of an effect is in the state, and that the effect's
@@ -75,6 +78,20 @@ checkEffectNodeSets <- function(effectName, args, state) {
   if (effectName %in% sameNodeSetEffects && !identical(originSet, destinations)) {
     stop(paste0("Effect ", effectName, " needs an origin with the nodeset of the destinations (",
                 destinations, ")."))
+  }
+  if (effectName %in% originAttributeEffects && !identical(originSet, destinations) &&
+      !is.character(args$origin.attribute.index)) {
+    stop(paste0("Effect ", effectName, ": the origin ", origin, " has another nodeset (",
+                originSet, ") than the destinations; specify the covariate of its ",
+                "locations with origin.attribute."))
+  }
+  if (is.character(args$origin.attribute.index)) {
+    actual <- state[[args$origin.attribute.index]]$nodeSet
+    if (!identical(as.character(actual), originSet)) {
+      stop(paste0("Effect ", effectName, ": the covariate '", args$origin.attribute.index,
+                  "' must be defined for ", originSet, ", not for ",
+                  paste(actual, collapse = " x "), "."))
+    }
   }
   if (isTRUE(args$exclude.loops) && !identical(originSet, destinations)) {
     stop(paste0("Effect ", effectName, ": exclude.loops needs an origin with the nodeset of ",

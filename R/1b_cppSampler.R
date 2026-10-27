@@ -56,9 +56,12 @@ cppEffectSpec <- function(effects, state) {
       spec$attribute <- as.numeric(state[[args$attribute.index]]$data)
       spec$attributeIsMatrix <- is.matrix(state[[args$attribute.index]]$data)
       # same_covariate and sim_covariate use the 'same' / 'sim' matrix of the
-      # covariate
+      # covariate, or compare it with the covariate of the origin's locations
+      if (is.character(args$origin.attribute.index)) {
+        spec$originAttribute <- as.numeric(state[[args$origin.attribute.index]]$data)
+      }
       for (m in c("same", "sim")) {
-        if (effectName == paste0(m, "_covariate")) {
+        if (effectName == paste0(m, "_covariate") && is.null(spec$originAttribute)) {
           if (is.null(state[[args$attribute.index]][[m]])) {
             stop(paste0("Effect ", effectName, " expects covariates with a '", m, "' attribute."))
           }

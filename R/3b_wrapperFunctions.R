@@ -47,8 +47,11 @@ addFixedEffects <- addDummyEffects
 #' @param effectsObject The realm effects object to which another
 #' effect should be added.
 #' @param effectName The name of the effect that should be added (e.g. loops).
-#' @param ... Additional parameters of the effect, for example alpha,
-#' attribute.index, or resource.attribute.index
+#' @param ... Additional parameters of the effect, for example the origin
+#' (for effects that depend on one), alpha, node.attribute (a covariate of the
+#' locations, or a dyadic covariate), edge.attribute (a covariate of the
+#' resources), or origin.attribute (a covariate of the origin's locations, for
+#' same_covariate and sim_covariate).
 #'
 #' @return An object of type effectsList.realm
 #' @export
@@ -75,6 +78,7 @@ addEffect <- function(effectsObject, effectName, ...){
   
   names(effect_arg)[names(effect_arg) == "node.attribute"] <- "attribute.index"
   names(effect_arg)[names(effect_arg) == "edge.attribute"] <- "resource.attribute.index"
+  names(effect_arg)[names(effect_arg) == "origin.attribute"] <- "origin.attribute.index"
   
   new.eff <- do.call(createEffectsObject, 
                      list( effectInit = list(effect_arg) , 
