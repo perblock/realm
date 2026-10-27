@@ -1,4 +1,4 @@
-# realm 0.0.0.9000
+# realm 0.1.0
 
 - First version, based on MoNAn 2.1.1.9000
   (<https://github.com/stocnet/MoNAn>). The package, its S3 classes

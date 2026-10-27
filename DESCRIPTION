@@ -1,7 +1,7 @@
 Package: realm
 Type: Package
 Title: Relational Analysis of Mobility
-Version: 0.0.0.9000
+Version: 0.1.0
 Date: 2026-10-27
 Authors@R: c(person("Per", "Block", role = c("cre", "aut", "cph"), email = "block@soziologie.uzh.ch", 
         comment = c(ORCID = "0000-0002-7583-2392")), 
