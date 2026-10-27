@@ -10,7 +10,7 @@ src/*.dll
 .Ruserdata
 temp1.RData
 inst/doc
-MoNAn.Rproj
+realm.Rproj
 
 # kept locally for CRAN submissions only
 cran-comments.md

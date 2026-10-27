@@ -3,20 +3,20 @@
 \name{gofMobilityNetwork}
 \alias{gofMobilityNetwork}
 \alias{gofDistributionNetwork}
-\alias{monanGOF}
-\alias{plot.gof.stats.monan}
+\alias{realmGOF}
+\alias{plot.gof.stats.realm}
 \title{gofMobilityNetwork}
 \usage{
 gofMobilityNetwork(ans, gofFunction, lvls = NULL, simulations = NULL)
 
 gofDistributionNetwork(ans, gofFunction, lvls = NULL, simulations = NULL)
 
-monanGOF(ans, gofFunction, lvls = NULL, simulations = NULL)
+realmGOF(ans, gofFunction, lvls = NULL, simulations = NULL)
 
-\method{plot}{gof.stats.monan}(x, lvls = NULL, xlab = NULL, ...)
+\method{plot}{gof.stats.realm}(x, lvls = NULL, xlab = NULL, ...)
 }
 \arguments{
-\item{ans}{An object of class "result.monan" resulting from an estimation
+\item{ans}{An object of class "result.realm" resulting from an estimation
 with the function \code{\link[=estimateMobilityNetwork]{estimateMobilityNetwork()}} using the option deps = TRUE.}
 
 \item{gofFunction}{A gof function that specifies which auxiliary outcome should be used,
@@ -31,7 +31,7 @@ by \code{gofMobilityNetwork}; if NULL, all are plotted.}
 
 \item{simulations}{outdated parameter, no need to specify}
 
-\item{x}{An object of class "gof.stats.monan".}
+\item{x}{An object of class "gof.stats.realm".}
 
 \item{xlab}{Label of the x-axis. By default "value" if the statistics are
 named by the values they refer to (as for \code{\link[=getIndegree]{getIndegree()}} and
@@ -44,7 +44,7 @@ The function \code{gofMobilityNetwork} returns a list containing
 (1) the observed values of the auxiliary statistics and
 (2) a list of the simulated values of the auxiliary statistics.
 
-The function \code{plot.gof.stats.monan} draws box plots of the
+The function \code{plot.gof.stats.realm} draws box plots of the
 gof tests with observed values superimposed in red, and invisibly returns
 the result of \code{\link[graphics:boxplot]{graphics::boxplot()}}. The x-axis shows the
 values the statistics refer to (e.g., the indegree), if the gof function

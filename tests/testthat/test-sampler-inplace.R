@@ -24,7 +24,7 @@ test_that("cache matches a rebuilt cache after many in-place steps", {
     simState <- toListState(res$state, dv)
     simCache <- toListCache(res$cache)
 
-    expect_s3_class(simState[[dv]], "edgelist.monan")
+    expect_s3_class(simState[[dv]], "edgelist.realm")
     expect_false(identical(simState[[dv]]$data, state[[dv]]$data))
     expect_equal(
       simCache,
@@ -80,7 +80,7 @@ test_that("stored simulations are independent lists", {
 
   for (s in sims) {
     expect_type(s$cache[[dv]], "list")
-    expect_s3_class(s$state[[dv]], "edgelist.monan")
+    expect_s3_class(s$state[[dv]], "edgelist.realm")
     expect_equal(s$cache, createInternalCache(
       s$state, resourceCovariates = names(myState$cache[[dv]]$resourceNetworks)
     ))
@@ -121,7 +121,7 @@ test_that("the two-path network stays exact in R and C++ chains", {
   expect_identical(createInternalCache(state)[[dv]]$twoPathNetwork,
                    twoPathsOf(state$cache))
 
-  oldOptions <- options(MoNAn.useCpp = FALSE)
+  oldOptions <- options(realm.useCpp = FALSE)
   on.exit(options(oldOptions), add = TRUE)
   for (multinomial in c(FALSE, TRUE)) {
     set.seed(3)

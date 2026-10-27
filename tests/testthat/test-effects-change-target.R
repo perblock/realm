@@ -7,7 +7,7 @@
 #   dyadic covariates:   sameRegion (binary), size_similarity (continuous)
 #   resource covariates: sex (binary), second_or (origin id, used as continuous)
 #
-# Set MONAN_FULL_EFFECT_TESTS=true to move every resource instead of a sample.
+# Set REALM_FULL_EFFECT_TESTS=true to move every resource instead of a sample.
 
 effect_specs <- list(
   # exogenous
@@ -142,7 +142,7 @@ test_that("additional-origin loop effects handle moves into a loop", {
 })
 
 test_that("every exported effect has a change/target test", {
-  ns <- asNamespace("MoNAn")
+  ns <- asNamespace("realm")
   is_effect <- vapply(getNamespaceExports(ns), function(name) {
     f <- get(name, envir = ns)
     is.function(f) && all(c("state", "cache", "getTargetContribution") %in% names(formals(f)))

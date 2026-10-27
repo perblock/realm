@@ -9,11 +9,11 @@
 #' This is particularly useful when including fixed effects for each location
 #' to explicitly model the indegree of each location.
 #'
-#' @param effectsObject The monan Effects object to which the dummy
+#' @param effectsObject The realm effects object to which the dummy
 #' location effects should be added.
-#' @param state The monan state (data) object that the effects object applies to
+#' @param state The realm state (data) object that the effects object applies to
 #'
-#' @return An object of type effectsList.monan
+#' @return An object of type effectsList.realm
 #' @export
 #'
 #' @examples
@@ -42,15 +42,15 @@ addFixedEffects <- addDummyEffects
 
 #' addEffect
 #' 
-#' A function to add additional effects to a monan effects object
+#' A function to add additional effects to a realm effects object
 #'
-#' @param effectsObject The monan Effects object to which another
+#' @param effectsObject The realm effects object to which another
 #' effect should be added.
 #' @param effectName The name of the effect that should be added (e.g. loops).
 #' @param ... Additional parameters of the effect, for example alpha,
 #' attribute.index, or resource.attribute.index
 #'
-#' @return An object of type effectsList.monan
+#' @return An object of type effectsList.realm
 #' @export
 #'
 #' @examples
@@ -95,7 +95,7 @@ addEffect <- function(effectsObject, effectName, ...){
 #'
 #' @param state The state to which the model applies.
 #'
-#' @return An empty effects object of class effectsList.monan
+#' @return An empty effects object of class effectsList.realm
 #' @export
 #'
 #' @examples
@@ -107,20 +107,20 @@ createEffects <- function(state){
             nodeset1 = state[[state$dep.var]]$nodeSet[1],
             nodeset2 = state[[state$dep.var]]$nodeSet[3]
             )
-  class(l) <- "effectsList.monan"
+  class(l) <- "effectsList.realm"
   l
 }
 
 
 
-#' monanDataCreate
+#' realmDataCreate
 #'
-#' A function to create a monan process state, i.e., 
-#' a MoNAn object that stores all information
+#' A function to create a realm process state, i.e., 
+#' a realm object that stores all information
 #' about the data that will be used in the estimation. This includes the
 #' outcome variable (edgelist), the nodesets, and all covariates.
 #'
-#' @param ... The monan objects to be included in the process State. 
+#' @param ... The realm objects to be included in the process State. 
 #' This must include exactly one edgelist (dependent variable) and the
 #' two nodesets associated with the edgelist.
 #' Further allowed elements are (monadic or dyadic) covariates of locations and people
@@ -130,7 +130,7 @@ createEffects <- function(state){
 #' "dummy2", "dummy3", etc., and can be added to the model with
 #' [addDummyEffects()] (or its alias [addFixedEffects()]).
 #' 
-#' @return An object of class "processState.monan".
+#' @return An object of class "processState.realm".
 #' @export
 #'
 #' @examples
@@ -148,16 +148,16 @@ createEffects <- function(state){
 #' size <- createNodeVariable(orgSize, nodeSet = "organisations", addSim = TRUE)
 #' sex <- createNodeVariable(indSex, nodeSet = "people")
 #' 
-#' monanDataCreate(transfers, people, organisations, 
+#' realmDataCreate(transfers, people, organisations, 
 #'                 sameRegion, region, size, sex)
-monanDataCreate <- function(..., fixedEffectDummies = FALSE){
+realmDataCreate <- function(..., fixedEffectDummies = FALSE){
   varnames <- unlist(lapply(substitute(list(...))[-1], deparse))
   elements <- list(...)
   names(elements) <- varnames
   dep.var <- NULL
   for (i in 1:length(elements)) {
     e <- elements[[i]]
-    if (inherits(e, "edgelist.monan")) {
+    if (inherits(e, "edgelist.realm")) {
       if (is.null(dep.var)) {
         dep.var <- names(elements)[i]
         edgelist <- e

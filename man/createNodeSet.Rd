@@ -2,15 +2,15 @@
 % Please edit documentation in R/3_coreFunctions.R
 \name{createNodeSet}
 \alias{createNodeSet}
-\alias{monanEdges}
-\alias{monanNodes}
+\alias{realmEdges}
+\alias{realmNodes}
 \title{createNodeSet}
 \usage{
 createNodeSet(x = NULL, isPresent = NULL, considerWhenSampling = NULL)
 
-monanEdges(x = NULL, isPresent = NULL, considerWhenSampling = NULL)
+realmEdges(x = NULL, isPresent = NULL, considerWhenSampling = NULL)
 
-monanNodes(x = NULL, isPresent = NULL, considerWhenSampling = NULL)
+realmNodes(x = NULL, isPresent = NULL, considerWhenSampling = NULL)
 }
 \arguments{
 \item{x}{Either a single number indicating how many items are in this nodeset
@@ -29,13 +29,13 @@ is, their mobility is exogenously defined and does not follow the same logic as
 the mobility of everybody else.}
 }
 \value{
-An object of class "nodeSet.monan".
+An object of class "nodeSet.realm".
 }
 \description{
 Determines and names the nodesets of individuals and locations that make up the mobility network.
 }
 \examples{
-# create an object of class nodeSet.monan
+# create an object of class nodeSet.realm
 people <- createNodeSet(1:nrow(mobilityEdgelist))
 organisations <- createNodeSet(length(orgRegion))
 }

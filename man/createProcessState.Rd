@@ -16,10 +16,10 @@ specified under "elements". This indicates what outcome
 the researcher is interested in.}
 }
 \value{
-An object of class "processState.monan".
+An object of class "processState.realm".
 }
 \description{
-Creates the "Process state", i.e., a MoNAn object that stores all information
+Creates the "Process state", i.e., a realm object that stores all information
 about the data that will be used in the estimation. This includes the
 outcome variable (edgelist), the nodesets, and all covariates.
 }

@@ -8,26 +8,26 @@
 \alias{myAlg}
 \alias{myResDN}
 \alias{mySimDN}
-\title{Exemplary Outcome Objects for the MoNAn Package}
+\title{Exemplary Outcome Objects for the realm Package}
 \format{
 \code{myState}
-An object of class "processState.monan" created by the function \code{\link[=createProcessState]{createProcessState()}}.
+An object of class "processState.realm" created by the function \code{\link[=createProcessState]{createProcessState()}}.
 
 \code{myEffects}
-An object of class "effectsList.monan" created by the function \code{\link[=createEffectsObject]{createEffectsObject()}}
+An object of class "effectsList.realm" created by the function \code{\link[=createEffectsObject]{createEffectsObject()}}
 or \code{\link[=createEffects]{createEffects()}}.
 
 \code{myAlg}
-An object of class "algorithm.monan" created by the function \code{\link[=createAlgorithm]{createAlgorithm()}}.
+An object of class "algorithm.realm" created by the function \code{\link[=createAlgorithm]{createAlgorithm()}}.
 
 \code{myResDN}
-An object of class "result.monan" created by the function \code{\link[=estimateMobilityNetwork]{estimateMobilityNetwork()}}.
+An object of class "result.realm" created by the function \code{\link[=estimateMobilityNetwork]{estimateMobilityNetwork()}}.
 
 \code{mySimDN}
-An object of class "sims.monan" created by the function \code{\link[=simulateMobilityNetworks]{simulateMobilityNetworks()}}.
+An object of class "sims.realm" created by the function \code{\link[=simulateMobilityNetworks]{simulateMobilityNetworks()}}.
 }
 \description{
-These are exemplary outcome objects for the MoNAn package and can be used in
+These are exemplary outcome objects for the realm package and can be used in
 order not to run all precedent functions and thus save time. The following
 products are provided:
 }

@@ -82,10 +82,10 @@ cppEffectSpec <- function(effects, state) {
 }
 
 # useCppSampler
-# whether the C++ sampler is used for these effects; options(MoNAn.useCpp =
+# whether the C++ sampler is used for these effects; options(realm.useCpp =
 # FALSE) switches to the R sampler
 useCppSampler <- function(effects, state) {
-  isTRUE(getOption("MoNAn.useCpp", TRUE)) && !is.null(cppEffectSpec(effects, state))
+  isTRUE(getOption("realm.useCpp", TRUE)) && !is.null(cppEffectSpec(effects, state))
 }
 
 # cppChainInputs
@@ -172,11 +172,11 @@ cppNetworkStatistics <- function(dep.var, state, cache, effects) {
 # once (mpleChoiceSetsCpp in src/sampler.cpp), storing each distinct choice set
 # only once: resources with the same origin, destination and values of the
 # resource covariates used by the effects have the same change statistics.
-# If they would need more memory than getOption("MoNAn.mpleMemoryLimit")
+# If they would need more memory than getOption("realm.mpleMemoryLimit")
 # bytes (default 1 GB), they are recomputed in each call instead
 # (mpleNewtonCpp), which needs memory for one resource at a time.
 mpleObjectiveCpp <- function(dep.var, state, cache, effects, allowLoops,
-                             memoryLimit = getOption("MoNAn.mpleMemoryLimit", 1e9)) {
+                             memoryLimit = getOption("realm.mpleMemoryLimit", 1e9)) {
   inputs <- cppChainInputs(dep.var, state, cache)
   specs <- cppEffectSpec(effects, inputs$state)
   keyCovariates <- unique(as.character(unlist(lapply(specs, function(spec) {

@@ -1,10 +1,10 @@
-# Adding an effect to MoNAn
+# Adding an effect to realm
 
 Note: This guide was written by Claude Code, which produced the code for the majority
 of the C++ implementation of the MCMC. The C++ implementation is checked in all
 steps and effects that it exactly reproduces the human-coded R-based implementation.
 
-This guide is for developers of MoNAn. It explains how to add a new effect so
+This guide is for developers of realm. It explains how to add a new effect so
 that it works with both samplers:
 
 - the **R sampler** (`R/1_hiddenFunctions.R`), which calls the effect's R function;
@@ -140,7 +140,7 @@ For further parameter values, add entries with `.effect`, e.g.
 A test fails if an exported effect has no entry.
 
 Run the tests: `devtools::test(filter = "effects-change-target")`. Set the
-environment variable `MONAN_FULL_EFFECT_TESTS=true` to move every resource
+environment variable `REALM_FULL_EFFECT_TESTS=true` to move every resource
 instead of a sample.
 
 ## 4. The C++ class
@@ -148,7 +148,7 @@ instead of a sample.
 ### The class
 
 C++ effects live in `src/effects.cpp`. An effect implements the interface
-`Effect` from `src/monan.h`:
+`Effect` from `src/realm.h`:
 
 ```cpp
 // alter_covariate_squared (R/2a_effectFunctions_exogenous.R)
@@ -229,9 +229,9 @@ therefore match R to the last bit:
   (use `rSeqFromZero()`), and `1:(y - 1)` goes up to `floor(y - 1)`.
 - **Write loops in R's order.** A sum that R calculates as `contr <- contr + x`
   in a loop is a `double`, not a `long double`.
-- **No fused multiply-add.** The pragma at the top of `src/monan.h` switches it
+- **No fused multiply-add.** The pragma at the top of `src/realm.h` switches it
   off (the compiler would otherwise compute `a + b * c` with one rounding instead
-  of two). Every C++ file must include `monan.h`.
+  of two). Every C++ file must include `realm.h`.
 
 Values that are integers in practice (counts of resources) are exact in any
 order, so these rules matter most for effects with weights such as AC/GW
@@ -292,5 +292,5 @@ if they differ.
 Users can also write their own effects in R, with the signature from step 1, and
 add them with `addEffect()`. The function must be defined in the global
 environment, because `addEffect()` finds effects (and the state) by name there.
-Models with such effects use the R sampler automatically. `options(MoNAn.useCpp = FALSE)` makes all models use the R
+Models with such effects use the R sampler automatically. `options(realm.useCpp = FALSE)` makes all models use the R
 sampler, e.g. to compare both.

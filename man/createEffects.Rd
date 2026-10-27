@@ -10,7 +10,7 @@ createEffects(state)
 \item{state}{The state to which the model applies.}
 }
 \value{
-An empty effects object of class effectsList.monan
+An empty effects object of class effectsList.realm
 }
 \description{
 Generates an empty effects object to which new effects can be added

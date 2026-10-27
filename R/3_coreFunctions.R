@@ -6,9 +6,9 @@
 #' Specifies the algorithm used in the estimation based on characteristics
 #' of the state and the effects.
 #'
-#' @param state An object of class "processState.monan" that contains all relevant information about
+#' @param state An object of class "processState.realm" that contains all relevant information about
 #' the outcome in the form of an edgelist, the nodesets, and covariates.
-#' @param effects An object of class "effectsList.monan" that specifies the model.
+#' @param effects An object of class "effectsList.realm" that specifies the model.
 #' @param multinomialProposal How should the next possible outcome in the simulation chains
 #' be sampled? If TRUE, fewer simulation steps are needed, but each simulation
 #' step takes considerably longer. Defaults to FALSE.
@@ -75,7 +75,7 @@
 #' the final Geyer-Thompson step, which determines the estimates.
 #' Defaults to 3 * iterationsGT.
 #'
-#' @return An object of class "algorithm.monan".
+#' @return An object of class "algorithm.realm".
 #' @export
 #'
 #' @seealso [createProcessState()], [createEffectsObject()], [estimateMobilityNetwork()]
@@ -217,19 +217,19 @@ createAlgorithm <-
       algorithm[["finalIterationsGT"]] <- finalIterationsGT
     }
 
-    class(algorithm) <- "algorithm.monan"
+    class(algorithm) <- "algorithm.realm"
     algorithm
   }
 
-#' monanAlgorithmCreate
+#' realmAlgorithmCreate
 #'
 #' @rdname createAlgorithm
-monanAlgorithmCreate <- createAlgorithm
+realmAlgorithmCreate <- createAlgorithm
 
 #' createEdgelist
 #'
 #' Creates an edgelist object, which is the standard format of the outcome to be modelled
-#' by MoNAn.
+#' by realm.
 #'
 #' @param el An edgelist in the form of a matrix with two columns and N rows.
 #' The first column indicates the origin of a person/resource, the second row the destination.
@@ -242,13 +242,13 @@ monanAlgorithmCreate <- createAlgorithm
 #' @param edges Alternative way to specify the nodeSet by naming nodes and edges: 
 #' edges denote the individuals in the edgelist
 #' 
-#' @return An object of class "edgelist.monan".
+#' @return An object of class "edgelist.realm".
 #' @export
 #'
 #' @seealso [createProcessState()]
 #'
 #' @examples
-#' # create an object of class edgelist.monan
+#' # create an object of class edgelist.realm
 #' transfers <- createEdgelist(mobilityEdgelist, c("organisations", "organisations", "people"))
 createEdgelist <-
   function(el, nodeSet = NULL, nodes = NULL, edges = NULL) {
@@ -287,14 +287,14 @@ createEdgelist <-
       nodeSet = nodeSet,
       size = dim(el)
     )
-    class(l) <- "edgelist.monan"
+    class(l) <- "edgelist.realm"
     l
   }
 
-#' monanDependent
+#' realmDependent
 #'
 #' @rdname createEdgelist
-monanDependent <- createEdgelist
+realmDependent <- createEdgelist
 
 
 #' createEffectsObject
@@ -307,7 +307,7 @@ monanDependent <- createEdgelist
 #' Effects without further parameters only contain the effect name (e.g., loops).
 #' @param checkProcessState For internal use only.
 #'
-#' @return An object of class "effectsList.monan".
+#' @return An object of class "effectsList.realm".
 #' @export
 #'
 #' @examples
@@ -377,7 +377,7 @@ createEffectsObject <-
       effectFormulas = effects,
       name = unlist(effectNames)
     )
-    class(effectslist) <- "effectsList.monan"
+    class(effectslist) <- "effectsList.realm"
 
     # checks of the data that effects refer to (see checkEffectInputs)
     if (!is.null(checkProcessState)) {
@@ -401,13 +401,13 @@ createEffectsObject <-
 #' @param nodes Alternative way to specify the nodeSet by naming nodes: 
 #' nodes denote the locations in the edgelist
 #'
-#' @return An object of class "network.monan".
+#' @return An object of class "network.realm".
 #' @export
 #'
 #' @seealso [createProcessState()], [createEdgelist()]
 #'
 #' @examples
-#' # create an object of class network.monan
+#' # create an object of class network.realm
 #' sameRegion <- outer(orgRegion, orgRegion, "==") * 1
 #' sameRegion <- createNetwork(sameRegion, nodeSet = c("organisations", "organisations"))
 createNetwork <-
@@ -448,7 +448,7 @@ createNetwork <-
       nodeSet = nodeSet,
       size = dim(m)
     )
-    class(l) <- "network.monan"
+    class(l) <- "network.realm"
     l
   }
 
@@ -475,13 +475,13 @@ dyadicCovar <- createNetwork
 #' is, their mobility is exogenously defined and does not follow the same logic as
 #' the mobility of everybody else.
 #'
-#' @return An object of class "nodeSet.monan".
+#' @return An object of class "nodeSet.realm".
 #' @export
 #'
 #' @seealso [createProcessState()]
 #'
 #' @examples
-#' # create an object of class nodeSet.monan
+#' # create an object of class nodeSet.realm
 #' people <- createNodeSet(1:nrow(mobilityEdgelist))
 #' organisations <- createNodeSet(length(orgRegion))
 createNodeSet <-
@@ -517,20 +517,20 @@ createNodeSet <-
       ids = ids,
       considerWhenSampling = considerWhenSampling
     )
-    class(l) <- "nodeSet.monan"
+    class(l) <- "nodeSet.realm"
     l
   }
 
-#' monanEdges
+#' realmEdges
 #' 
 #' @rdname createNodeSet
-monanEdges <- createNodeSet
+realmEdges <- createNodeSet
 
 
-#' monanNodes
+#' realmNodes
 #' 
 #' @rdname createNodeSet
-monanNodes <- createNodeSet
+realmNodes <- createNodeSet
 
 
 #' createNodeVariable
@@ -550,13 +550,13 @@ monanNodes <- createNodeSet
 #' @param edges Alternative way to specify the nodeSet by naming nodes or edges: 
 #' edges denote the individuals in the edgelist
 #' 
-#' @return An object of class "nodeVar.monan".
+#' @return An object of class "nodeVar.realm".
 #' @export
 #'
 #' @seealso [createProcessState()]
 #'
 #' @examples
-#' # create an object of class nodeVar.monan
+#' # create an object of class nodeVar.realm
 #' region <- createNodeVariable(orgRegion, nodeSet = "organisations")
 #' size <- createNodeVariable(orgSize, nodeSet = "organisations", addSim = TRUE)
 #' sex <- createNodeVariable(indSex, nodeSet = "people")
@@ -624,7 +624,7 @@ createNodeVariable <-
         1 - abs(outer(values, values, "-")) / (range(values)[2] - range(values)[1])
     }
 
-    class(l) <- "nodeVar.monan"
+    class(l) <- "nodeVar.realm"
     l
   }
 
@@ -636,7 +636,7 @@ monadicCovar <- createNodeVariable
 
 #' createProcessState
 #'
-#' Creates the "Process state", i.e., a MoNAn object that stores all information
+#' Creates the "Process state", i.e., a realm object that stores all information
 #' about the data that will be used in the estimation. This includes the
 #' outcome variable (edgelist), the nodesets, and all covariates.
 #'
@@ -647,7 +647,7 @@ monadicCovar <- createNodeVariable
 #' specified under "elements". This indicates what outcome
 #' the researcher is interested in.
 #'
-#' @return An object of class "processState.monan".
+#' @return An object of class "processState.realm".
 #' @export
 #'
 #' @seealso [createEdgelist()], [createNodeSet()],
@@ -697,22 +697,22 @@ createProcessState <- function(elements, dependentVariable) {
     e <- elements[[i]]
     if (!(
       class(e) %in% c(
-        "edgelist.monan",
-        "nodeSet.monan",
-        "nodeVar.monan",
-        "network.monan"
+        "edgelist.realm",
+        "nodeSet.realm",
+        "nodeVar.realm",
+        "network.realm"
       )
     )) {
       stop(paste0("Unknown element of class '", class(e), 
-           "'. Input objects should either be of classes 'edgelist.monan', 'nodeSet.monan', 'nodeVar.monan or 'network.monan'."))
+           "'. Input objects should either be of classes 'edgelist.realm', 'nodeSet.realm', 'nodeVar.realm or 'network.realm'."))
     }
 
     # TODO CLEANUP from here. What is necessary, hat should be extended?
 
-    if (is(e, "nodeSet.monan")) {
+    if (is(e, "nodeSet.realm")) {
       nodeSetIDs <- c(nodeSetIDs, i)
     }
-    if (class(e) %in% c("network.monan", "nodeVar.monan")) {
+    if (class(e) %in% c("network.realm", "nodeVar.realm")) {
       linkedElementIDs <- c(linkedElementIDs, i)
       sizes <- c(sizes, e$size)
     }
@@ -733,7 +733,7 @@ createProcessState <- function(elements, dependentVariable) {
   
   elements$dep.var <- dependentVariable
 
-  class(elements) <- "processState.monan"
+  class(elements) <- "processState.realm"
   
   checkProcessState(elements) # checks whether all input objects are correctly specified/valid
   
@@ -781,10 +781,10 @@ createWeightedCache <-
 #' The core function of the package in which the model for the analysis of
 #' mobility tables is estimated.
 #'
-#' @param state An object of class "processState.monan" which contains all relevant information about
+#' @param state An object of class "processState.realm" which contains all relevant information about
 #' the outcome in the form of an edgelist, the nodesets, and covariates.
-#' @param effects An object of class "effectsList.monan" that specifies the model.
-#' @param algorithm An object of class "algorithm.monan" which specifies the algorithm used in the estimation.
+#' @param effects An object of class "effectsList.realm" that specifies the model.
+#' @param algorithm An object of class "algorithm.realm" which specifies the algorithm used in the estimation.
 #' @param initialParameters Starting values for the parameters. If neither
 #' initialParameters nor prevAns are specified, maximum pseudo-likelihood
 #' estimates are used, i.e., the estimates of the multinomial logit model for
@@ -793,7 +793,7 @@ createWeightedCache <-
 #' calculation, the change statistics of all possible destinations are stored,
 #' once for each group of resources with the same origin, destination and
 #' values of the resource covariates used by the effects. If this needs more
-#' than `getOption("MoNAn.mpleMemoryLimit")` bytes (default 1e9, i.e., 1 GB),
+#' than `getOption("realm.mpleMemoryLimit")` bytes (default 1e9, i.e., 1 GB),
 #' they are recalculated in each step instead, which is slower but needs little
 #' memory.
 #' @param prevAns If a previous estimation did not yield satisfactory convergence,
@@ -804,7 +804,7 @@ createWeightedCache <-
 #' 'parallel'). Each chain gets its own random number stream derived from the
 #' random numbers of the R session, so results are reproducible with
 #' [set.seed()]; they differ from those of a serial estimation with the same
-#' seed. The workers use the installed version of MoNAn.
+#' seed. The workers use the installed version of realm.
 #' @param cpus Number of cores for computation in case parallel = TRUE.
 #' @param verbose Logical: display information about estimation progress in the console?
 #' @param returnDeps Logical: should the simulated values of Phase 3 be stored and returned?
@@ -815,7 +815,7 @@ createWeightedCache <-
 #' results object. Defaults to FALSE.
 #' @param cache Outdated parameter, no need to specify.
 #'
-#' @return The function `estimateMobilityNetwork` returns an object of class "result.monan" that contains the estimates, standard errors,
+#' @return The function `estimateMobilityNetwork` returns an object of class "result.realm" that contains the estimates, standard errors,
 #' and convergence statistics. Furthermore, the covariance matrix used to calculate
 #' the standard errors is included, which also shows collinearity between effects.
 #' In case returnDeps = TRUE, the simulations of Phase 3 are included, too,
@@ -1066,7 +1066,7 @@ estimateMobilityNetwork <-
       result[["algorithm"]] <- algorithm
     }
 
-    class(result) <- "result.monan"
+    class(result) <- "result.realm"
 
     return(result)
   }
@@ -1078,15 +1078,10 @@ estimateMobilityNetwork <-
 estimateDistributionNetwork <- estimateMobilityNetwork
 
 
-#' monan07
+#' realmEstimate
 #'
 #' @rdname estimateMobilityNetwork
-monan07 <- estimateMobilityNetwork
-
-#' monanEstimate
-#'
-#' @rdname estimateMobilityNetwork
-monanEstimate <- estimateMobilityNetwork
+realmEstimate <- estimateMobilityNetwork
 
 
 #' simulateMobilityNetworks
@@ -1095,11 +1090,11 @@ monanEstimate <- estimateMobilityNetwork
 #' function is mainly interesting to explore the behavior of the model or to
 #' do counter-factual simulations.
 #'
-#' @param state An object of class "processState.monan" that contains all relevant information about
+#' @param state An object of class "processState.realm" that contains all relevant information about
 #' nodesets, and covariates. Further, an edgelist of the dependent variable needs
 #' to be specified with the initial mobility network as starting value for the
 #' simulation. For a large enough burn-in, any initial mobility network is allowed.
-#' @param effects An object of class "effectsList.monan" that specifies the model.
+#' @param effects An object of class "effectsList.realm" that specifies the model.
 #' @param parameters The parameters associated with the effects that shall be used
 #' in the simulations.
 #' @param allowLoops Logical: can individuals/resources stay in their origin?
@@ -1112,7 +1107,7 @@ monanEstimate <- estimateMobilityNetwork
 #' @param nSimulations The number of mobility networks to be simulated.
 #' @param cache Outdated parameter, no need to specify.
 #'
-#' @return An object of class "sims.monan" with nSimulations entries, where each entry contains a further list with the
+#' @return An object of class "sims.realm" with nSimulations entries, where each entry contains a further list with the
 #' state and the cache of the current simulation stored.
 #' @export
 #'
@@ -1201,7 +1196,7 @@ simulateMobilityNetworks <-
         cat("<o_><")
       }
     }
-    class(simulatedList) <- "sims.monan"
+    class(simulatedList) <- "sims.realm"
     return(simulatedList)
   }
 
@@ -1210,8 +1205,8 @@ simulateMobilityNetworks <-
 #' @rdname simulateMobilityNetworks
 simulateDistributionNetworks <- simulateMobilityNetworks
 
-#' monanSimulate
+#' realmSimulate
 #'
 #' @rdname simulateMobilityNetworks
-monanSimulate <- simulateMobilityNetworks
+realmSimulate <- simulateMobilityNetworks
 

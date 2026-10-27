@@ -2,7 +2,7 @@
 // One step follows simulateOneStep() in R/1_hiddenFunctions.R exactly,
 // including the order of random numbers, so that for the same seed the C++
 // chain equals the R chain.
-#include "monan.h"
+#include "realm.h"
 
 #include <algorithm>
 #include <map>

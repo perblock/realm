@@ -2,24 +2,24 @@
 export(
   
   # core functions and aliases
-  createAlgorithm, monanAlgorithmCreate,
-  createEdgelist, monanDependent, 
+  createAlgorithm, realmAlgorithmCreate,
+  createEdgelist, realmDependent, 
   createEffectsObject, createEffects, addEffect, addFixedEffects, addDummyEffects,
   createNetwork, dyadicCovar,
-  createNodeSet, monanNodes, monanEdges,
+  createNodeSet, realmNodes, realmEdges,
   createNodeVariable, monadicCovar,
-  createProcessState, monanDataCreate,
+  createProcessState, realmDataCreate,
   createWeightedCache,
-  estimateMobilityNetwork, estimateDistributionNetwork, monan07, monanEstimate,
-  simulateMobilityNetworks, simulateDistributionNetworks, monanSimulate,
+  estimateMobilityNetwork, estimateDistributionNetwork, realmEstimate,
+  simulateMobilityNetworks, simulateDistributionNetworks, realmSimulate,
   
   # auxiliary functions
   autoCorrelationTest, extractTraces, 
   getMultinomialStatistics, 
-  gofDistributionNetwork, gofMobilityNetwork, monanGOF,
-  plot.gof.stats.monan, 
-  plot.traces.monan, print.result.monan, print.scoretest.monan, scoreTest,
-  print.processState.monan, print.effectsList.monan,
+  gofDistributionNetwork, gofMobilityNetwork, realmGOF,
+  plot.gof.stats.realm, 
+  plot.traces.realm, print.result.realm, print.scoretest.realm, scoreTest,
+  print.processState.realm, print.effectsList.realm,
   
   # test functions
   target_change_match,
@@ -89,12 +89,12 @@ importFrom("stats", "as.formula", "ecdf", "pnorm", "runif", "sd", "dist", "cov",
 importFrom("methods", "is")
 importFrom("parallel", "makePSOCKcluster", "clusterCall", "clusterMap", "stopCluster", "nextRNGStream")
 importFrom("Rcpp", "evalCpp")
-useDynLib(MoNAn, .registration = TRUE)
+useDynLib(realm, .registration = TRUE)
 
 # S3 methods
-S3method(print, result.monan)
-S3method(plot, traces.monan)
-S3method(plot, gof.stats.monan)
-S3method(print, scoretest.monan)
-S3method(print, processState.monan)
-S3method(print, effectsList.monan)
+S3method(print, result.realm)
+S3method(plot, traces.realm)
+S3method(plot, gof.stats.realm)
+S3method(print, scoretest.realm)
+S3method(print, processState.realm)
+S3method(print, effectsList.realm)

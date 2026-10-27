@@ -3,9 +3,8 @@
 \name{estimateMobilityNetwork}
 \alias{estimateMobilityNetwork}
 \alias{estimateDistributionNetwork}
-\alias{monan07}
-\alias{monanEstimate}
-\alias{print.result.monan}
+\alias{realmEstimate}
+\alias{print.result.realm}
 \title{estimateMobilityNetwork}
 \usage{
 estimateMobilityNetwork(
@@ -38,7 +37,7 @@ estimateDistributionNetwork(
   cache = NULL
 )
 
-monan07(
+realmEstimate(
   state,
   effects,
   algorithm,
@@ -53,30 +52,15 @@ monan07(
   cache = NULL
 )
 
-monanEstimate(
-  state,
-  effects,
-  algorithm,
-  initialParameters = NULL,
-  prevAns = NULL,
-  parallel = FALSE,
-  cpus = 1,
-  verbose = FALSE,
-  returnDeps = FALSE,
-  fish = FALSE,
-  saveAlg = TRUE,
-  cache = NULL
-)
-
-\method{print}{result.monan}(x, covMat = FALSE, ...)
+\method{print}{result.realm}(x, covMat = FALSE, ...)
 }
 \arguments{
-\item{state}{An object of class "processState.monan" which contains all relevant information about
+\item{state}{An object of class "processState.realm" which contains all relevant information about
 the outcome in the form of an edgelist, the nodesets, and covariates.}
 
-\item{effects}{An object of class "effectsList.monan" that specifies the model.}
+\item{effects}{An object of class "effectsList.realm" that specifies the model.}
 
-\item{algorithm}{An object of class "algorithm.monan" which specifies the algorithm used in the estimation.}
+\item{algorithm}{An object of class "algorithm.realm" which specifies the algorithm used in the estimation.}
 
 \item{initialParameters}{Starting values for the parameters. If neither
 initialParameters nor prevAns are specified, maximum pseudo-likelihood
@@ -86,7 +70,7 @@ which \code{\link[=getMultinomialStatistics]{getMultinomialStatistics()}} provid
 calculation, the change statistics of all possible destinations are stored,
 once for each group of resources with the same origin, destination and
 values of the resource covariates used by the effects. If this needs more
-than \code{getOption("MoNAn.mpleMemoryLimit")} bytes (default 1e9, i.e., 1 GB),
+than \code{getOption("realm.mpleMemoryLimit")} bytes (default 1e9, i.e., 1 GB),
 they are recalculated in each step instead, which is slower but needs little
 memory.}
 
@@ -99,7 +83,7 @@ simulations run in \code{cpus} independent chains on a socket cluster (package
 'parallel'). Each chain gets its own random number stream derived from the
 random numbers of the R session, so results are reproducible with
 \code{\link[=set.seed]{set.seed()}}; they differ from those of a serial estimation with the same
-seed. The workers use the installed version of MoNAn.}
+seed. The workers use the installed version of realm.}
 
 \item{cpus}{Number of cores for computation in case parallel = TRUE.}
 
@@ -116,21 +100,21 @@ results object. Defaults to FALSE.}
 
 \item{cache}{Outdated parameter, no need to specify.}
 
-\item{x}{An object of class "result.monan".}
+\item{x}{An object of class "result.realm".}
 
 \item{covMat}{Logical: indicating whether the covariance matrix should be printed.}
 
 \item{...}{For internal use only.}
 }
 \value{
-The function \code{estimateMobilityNetwork} returns an object of class "result.monan" that contains the estimates, standard errors,
+The function \code{estimateMobilityNetwork} returns an object of class "result.realm" that contains the estimates, standard errors,
 and convergence statistics. Furthermore, the covariance matrix used to calculate
 the standard errors is included, which also shows collinearity between effects.
 In case returnDeps = TRUE, the simulations of Phase 3 are included, too,
 together with the statistics of the model's effects in the observed and the
 simulated networks (used by \code{\link[=scoreTest]{scoreTest()}}).
 
-The function \code{print.result.monan} prints the results from a monan
+The function \code{print.result.realm} prints the results from a realm
 estimation with three columns indicating the estimate, the standard error,
 and the convergence statistic.
 }

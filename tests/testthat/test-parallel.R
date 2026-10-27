@@ -1,4 +1,4 @@
-# parallel estimation: the workers load the installed MoNAn, so these tests
+# parallel estimation: the workers load the installed realm, so these tests
 # only run when the installed package is tested (devtools::check, R CMD check
 # with NOT_CRAN=true)
 skipParallel <- function() {

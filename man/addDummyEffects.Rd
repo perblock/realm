@@ -10,13 +10,13 @@ addDummyEffects(effectsObject, state)
 addFixedEffects(effectsObject, state)
 }
 \arguments{
-\item{effectsObject}{The monan Effects object to which the dummy
+\item{effectsObject}{The realm effects object to which the dummy
 location effects should be added.}
 
-\item{state}{The monan state (data) object that the effects object applies to}
+\item{state}{The realm state (data) object that the effects object applies to}
 }
 \value{
-An object of type effectsList.monan
+An object of type effectsList.realm
 }
 \description{
 A function to add one \link{alter_covariate} effect for each location

@@ -3,7 +3,7 @@
 \name{simulateMobilityNetworks}
 \alias{simulateMobilityNetworks}
 \alias{simulateDistributionNetworks}
-\alias{monanSimulate}
+\alias{realmSimulate}
 \title{simulateMobilityNetworks}
 \usage{
 simulateMobilityNetworks(
@@ -28,7 +28,7 @@ simulateDistributionNetworks(
   cache = NULL
 )
 
-monanSimulate(
+realmSimulate(
   state,
   effects,
   parameters,
@@ -40,12 +40,12 @@ monanSimulate(
 )
 }
 \arguments{
-\item{state}{An object of class "processState.monan" that contains all relevant information about
+\item{state}{An object of class "processState.realm" that contains all relevant information about
 nodesets, and covariates. Further, an edgelist of the dependent variable needs
 to be specified with the initial mobility network as starting value for the
 simulation. For a large enough burn-in, any initial mobility network is allowed.}
 
-\item{effects}{An object of class "effectsList.monan" that specifies the model.}
+\item{effects}{An object of class "effectsList.realm" that specifies the model.}
 
 \item{parameters}{The parameters associated with the effects that shall be used
 in the simulations.}
@@ -65,7 +65,7 @@ network. A recommended value for the lower bound is n_Individuals * n_locations.
 \item{cache}{Outdated parameter, no need to specify.}
 }
 \value{
-An object of class "sims.monan" with nSimulations entries, where each entry contains a further list with the
+An object of class "sims.realm" with nSimulations entries, where each entry contains a further list with the
 state and the cache of the current simulation stored.
 }
 \description{

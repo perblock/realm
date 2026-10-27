@@ -19,23 +19,23 @@ checkProcessState <- function(state) {
     stop("Dependent variable has no corresponding edgelist in the state object.")
   }
   
-  # is edgelist of class 'edgelist.monan'?
-  if (!(inherits(state[[dep.var]], "edgelist.monan"))) {
-    stop("Dependent variable is not of class 'edgelist.monan'.")
+  # is edgelist of class 'edgelist.realm'?
+  if (!(inherits(state[[dep.var]], "edgelist.realm"))) {
+    stop("Dependent variable is not of class 'edgelist.realm'.")
   }
   
   
   # extract nodeset names defined in edgelist
   nodesets <- state[[dep.var]]$nodeSet
   
-  # do nodeset names from edgelist have a corresponding nodeset and are they of class 'nodeset.monan'?
+  # do nodeset names from edgelist have a corresponding nodeset and are they of class 'nodeset.realm'?
   for (i in 1:length(nodesets)) {
     if (!(nodesets[i] %in% names(state))) {
       stop(paste(nodesets[i], "has no corresponding object.",
                  "Nodesets specified in the edgelist must have a corresponding object with the same name."))
     }
-    if (!(inherits(state[[nodesets[i]]], "nodeSet.monan"))) {
-      stop(paste(nodesets[i], "is not of class 'nodeSet.monan'."))
+    if (!(inherits(state[[nodesets[i]]], "nodeSet.realm"))) {
+      stop(paste(nodesets[i], "is not of class 'nodeSet.realm'."))
     }
   }
   
@@ -50,13 +50,13 @@ checkProcessState <- function(state) {
   # if there are covars, check them
   if (length(covars) != 0) {
     
-    # are covars of class 'nodeVar.monan' or 'network.monan'? do they have correctly
+    # are covars of class 'nodeVar.realm' or 'network.realm'? do they have correctly
     # specified nodeset names and are these nodesets of the correct size?
     for (i in 1:length(covars)) {
       #class
-      if (!(inherits(state[[covars[i]]], "nodeVar.monan") || 
-            inherits(state[[covars[i]]], "network.monan"))) {
-        stop(paste(covars[i], "must either be of class 'nodeVar.monan' or 'network.monan'."))
+      if (!(inherits(state[[covars[i]]], "nodeVar.realm") || 
+            inherits(state[[covars[i]]], "network.realm"))) {
+        stop(paste(covars[i], "must either be of class 'nodeVar.realm' or 'network.realm'."))
       }
       # nodeset names
       if (!(all(state[[covars[i]]]$nodeSet %in% names(state)))) {
@@ -80,7 +80,7 @@ createInternalCache <-
     cacheObjectNames <- processState$dep.var
     
     for (name in cacheObjectNames) {
-      if (!(class(processState[[name]]) %in% c("network.monan", "edgelist.monan"))) {
+      if (!(class(processState[[name]]) %in% c("network.realm", "edgelist.realm"))) {
         stop(paste(name, "is not a network or edgelist."))
       }
       
@@ -90,10 +90,10 @@ createInternalCache <-
       nActors2 <- length(nodeSet2)
       
       cache[[name]] <- list()
-      if (is(processState[[name]], "network.monan")) {
+      if (is(processState[[name]], "network.realm")) {
         cache[[name]]$valuedNetwork <- processState[[name]]$data
       }
-      if (is(processState[[name]], "edgelist.monan")) {
+      if (is(processState[[name]], "edgelist.realm")) {
         # create valued network from edge list
         nResources <- processState[[name]]$size[1]
         senders <- processState[[name]]$data[seq_len(nResources), 1]
@@ -149,7 +149,7 @@ createInternalCache <-
 # The values are sums of products of counts, so they are exact in floating
 # point whatever the order of summation, and the matrix can be updated
 # incrementally without rounding differences (see twoPathIncrements).
-# Caches created by MoNAn versions before 2.2 do not store the two-path
+# Caches created by MoNAn (versions before 2.2) do not store the two-path
 # network; it is then computed from the valued network.
 getTwoPathNetwork <- function(cacheDepVar) {
   if (!is.null(cacheDepVar$twoPathNetwork)) {
@@ -232,15 +232,15 @@ getNetworkStatistics <- function(dep.var, state, cache, effects) {
 
 # parallel computing
 # One socket cluster per estimation (startCluster); the workers load the
-# installed MoNAn. Each call of applyChains runs one task per worker (chain)
+# installed realm. Each call of applyChains runs one task per worker (chain)
 # and gives every task its own L'Ecuyer-CMRG random number stream. The streams
 # are derived from the random numbers of the master process, so results are
 # reproducible with set.seed() and the chains are independent.
 startCluster <- function(cpus) {
   cl <- makePSOCKcluster(cpus)
-  tryCatch(clusterCall(cl, loadNamespace, "MoNAn"), error = function(e) {
+  tryCatch(clusterCall(cl, loadNamespace, "realm"), error = function(e) {
     stopCluster(cl)
-    stop("MoNAn could not be loaded on the parallel workers: ", conditionMessage(e))
+    stop("realm could not be loaded on the parallel workers: ", conditionMessage(e))
   })
   cl
 }

@@ -66,13 +66,13 @@ check_move <- function(effect, args, edge, j_new,
 }
 
 # moves to test: random ones plus moves out of loops, into loops and no-ops.
-# With MONAN_FULL_EFFECT_TESTS=true, every resource is moved once.
+# With REALM_FULL_EFFECT_TESTS=true, every resource is moved once.
 sample_moves <- function(n = 30, seed = 1, state = lililiState) {
   el <- state[[state$dep.var]]$data
   nNodes <- length(state[[state[[state$dep.var]]$nodeSet[1]]]$ids)
   set.seed(seed)
 
-  if (identical(Sys.getenv("MONAN_FULL_EFFECT_TESTS"), "true")) {
+  if (identical(Sys.getenv("REALM_FULL_EFFECT_TESTS"), "true")) {
     random <- seq_len(nrow(el))
   } else {
     random <- sample(nrow(el), n)

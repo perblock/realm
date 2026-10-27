@@ -8,7 +8,7 @@
 #' values are better. Values above 0.5 are very problematic and indicate that a 
 #' higher thinning is needed.
 #' 
-#' @param ans An object of class "result.monan" resulting from an estimation with the function [estimateMobilityNetwork()].
+#' @param ans An object of class "result.realm" resulting from an estimation with the function [estimateMobilityNetwork()].
 #'
 #' @return A number indicating the auto-correlation.
 #' @export
@@ -42,8 +42,8 @@ autoCorrelationTest <- function(ans) {
 #' This function shows the values of simulated statistics in Phase 3 for subsequent draws from the chain.
 #' Ideally, the plots show points randomly scattered around the red line, which indicates the statistics in the data.
 #' 
-#' @param ans An object of class "result.monan" resulting from an estimation with the function [estimateMobilityNetwork()].
-#' @param effects An object of class "effectsList.monan" used in the estimation.
+#' @param ans An object of class "result.realm" resulting from an estimation with the function [estimateMobilityNetwork()].
+#' @param effects An object of class "effectsList.realm" used in the estimation.
 #' If the estimation stored the statistics of the model's effects
 #' (returnDeps = TRUE), they are used; otherwise the statistics are calculated
 #' from the simulations stored in ans.
@@ -93,7 +93,7 @@ extractTraces <- function(ans, effects) {
     effectNames = effects$name
   )
   
-  class(results) <- "traces.monan"
+  class(results) <- "traces.realm"
   
   results
 }
@@ -107,8 +107,8 @@ extractTraces <- function(ans, effects) {
 #' estimates for the full mobility model, which increases the chances of model 
 #' convergence in the first run of the estimation considerably.
 #'
-#' @param state An object of class "processState.monan" that stores all information to be used in the model.
-#' @param effects An object of class "effectsList.monan" for which the statistics of a multinomial
+#' @param state An object of class "processState.realm" that stores all information to be used in the model.
+#' @param effects An object of class "effectsList.realm" for which the statistics of a multinomial
 #' model should be calculated.
 #' @param cache Outdated parameter, no need to specify.
 #'
@@ -211,7 +211,7 @@ getMultinomialStatistics <-
 #' statistics are well captured by the model. The logic behind gof testing for network models is outlined in 
 #' Hunter et al. (2008) and Lospinoso and Snijders (2019).
 #'
-#' @param ans An object of class "result.monan" resulting from an estimation 
+#' @param ans An object of class "result.realm" resulting from an estimation 
 #' with the function [estimateMobilityNetwork()] using the option deps = TRUE.
 #' @param gofFunction A gof function that specifies which auxiliary outcome should be used, 
 #' e.g., "getIndegree" or "getTieWeights".
@@ -302,7 +302,7 @@ gofMobilityNetwork <-
     simStats <- gofStats
     simStats[[1]] <- NULL
     gofRes <- list(observed = gofStats[[1]], simulated = simStats)
-    class(gofRes) <- "gof.stats.monan"
+    class(gofRes) <- "gof.stats.realm"
     return(gofRes)
   }
 
@@ -312,22 +312,22 @@ gofMobilityNetwork <-
 gofDistributionNetwork <- gofMobilityNetwork
 
 
-#' monanGOF
+#' realmGOF
 #'
 #' @rdname gofMobilityNetwork
-monanGOF <- gofMobilityNetwork
+realmGOF <- gofMobilityNetwork
 
 
-#' plot.gof.stats.monan
+#' plot.gof.stats.realm
 #'
 #' @rdname gofMobilityNetwork
-#' @param x An object of class "gof.stats.monan".
+#' @param x An object of class "gof.stats.realm".
 #' @param xlab Label of the x-axis. By default "value" if the statistics are
 #' named by the values they refer to (as for [getIndegree()] and
 #' [getTieWeights()]), otherwise none.
 #' @param ... Additional plotting parameters passed to [graphics::boxplot()].
 #'
-#' @return The function `plot.gof.stats.monan` draws box plots of the 
+#' @return The function `plot.gof.stats.realm` draws box plots of the 
 #' gof tests with observed values superimposed in red, and invisibly returns
 #' the result of [graphics::boxplot()]. The x-axis shows the
 #' values the statistics refer to (e.g., the indegree), if the gof function
@@ -339,7 +339,7 @@ monanGOF <- gofMobilityNetwork
 #' plot(myGofIndegree,  lvls = 20:70)
 #' plot(myGofTieWeight, lvls = 1:15)
 #' }
-plot.gof.stats.monan <- function(x, lvls = NULL, xlab = NULL, ...) {
+plot.gof.stats.realm <- function(x, lvls = NULL, xlab = NULL, ...) {
   if (is.null(lvls)) {
     lvls <- 1:length(x$observed)
   }
@@ -353,13 +353,13 @@ plot.gof.stats.monan <- function(x, lvls = NULL, xlab = NULL, ...) {
 }
 
 
-#' plot.traces.monan
+#' plot.traces.realm
 #'
 #' @rdname extractTraces
-#' @param x An object of class "traces.monan".
+#' @param x An object of class "traces.realm".
 #' @param ... Additional plotting parameters, use not recommended.
 #'
-#' @return The function `plot.traces.monan` shows a scatter plot of the
+#' @return The function `plot.traces.realm` shows a scatter plot of the
 #' statistics of simulated networks from phase three of the estimation.
 #' @export
 #'
@@ -367,7 +367,7 @@ plot.gof.stats.monan <- function(x, lvls = NULL, xlab = NULL, ...) {
 #' \donttest{
 #' plot(traces)
 #' }
-plot.traces.monan <- function(x, ...) {
+plot.traces.realm <- function(x, ...) {
   nParams <- length(x[[1]])
   nSims <- length(x[[2]][, 1])
   for (i in 1:nParams) {
@@ -381,18 +381,18 @@ plot.traces.monan <- function(x, ...) {
 }
 
 
-#' print.effectsList.monan
+#' print.effectsList.realm
 #'
-#' @param x An object of class "effectsList.monan".
+#' @param x An object of class "effectsList.realm".
 #' @param ... For internal use only.
 #'
-#' @return The function `print.effectsList.monan` gives an overview of the 
+#' @return The function `print.effectsList.realm` gives an overview of the 
 #' specified effects.
 #' @export
 #'
 #' @examples
 #' myEffects
-print.effectsList.monan <- function(x, ...) {
+print.effectsList.realm <- function(x, ...) {
   
   df <- as.data.frame(matrix(nrow = 0, ncol = 4))
   colnames(df) <- c("name", paste0("covariate_", x$nodeset1), paste0("covariate_", x$nodeset2), "parameter")
@@ -464,18 +464,18 @@ print.effectsList.monan <- function(x, ...) {
 }
 
 
-#' print.processState.monan
+#' print.processState.realm
 #'
-#' @param x An object of class "processState.monan".
+#' @param x An object of class "processState.realm".
 #' @param ... For internal use only.
 #'
-#' @return The function `print.processState.monan` gives an overview of the information 
+#' @return The function `print.processState.realm` gives an overview of the information 
 #' included in the state object.
 #' @export
 #'
 #' @examples
 #' myState
-print.processState.monan <- function(x, ...) {
+print.processState.realm <- function(x, ...) {
   
   dep.var <- x$dep.var
   nodesets <- x[[dep.var]]$nodeSet
@@ -584,21 +584,21 @@ print.processState.monan <- function(x, ...) {
 }
 
 
-#' print.result.monan
+#' print.result.realm
 #'
 #' @rdname estimateMobilityNetwork
-#' @param x An object of class "result.monan".
+#' @param x An object of class "result.realm".
 #' @param covMat Logical: indicating whether the covariance matrix should be printed.
 #' @param ... For internal use only.
 #'
-#' @return The function `print.result.monan` prints the results from a monan
+#' @return The function `print.result.realm` prints the results from a realm
 #' estimation with three columns indicating the estimate, the standard error,
 #' and the convergence statistic.
 #' @export
 #' 
 #' @examples
 #' myResDN
-print.result.monan <- function(x, covMat = FALSE, ...) {
+print.result.realm <- function(x, covMat = FALSE, ...) {
   reslt <-
     data.frame(
       Effects = names(x$estimates),
@@ -645,9 +645,9 @@ print.result.monan <- function(x, covMat = FALSE, ...) {
 #' earlier versions of MoNAn, which do not contain them, the effects of the
 #' estimated model must be specified with modelEffects.
 #'
-#' @param ans An object of class "result.monan" resulting from an estimation with
+#' @param ans An object of class "result.realm" resulting from an estimation with
 #' the function [estimateMobilityNetwork()] using the option returnDeps = TRUE.
-#' @param effects An object of class "effectsList.monan" in which the non included
+#' @param effects An object of class "effectsList.realm" in which the non included
 #' effects that should be tested are specified.
 #' @param modelEffects The effects object of the estimated model. Only needed for
 #' results estimated with earlier versions of MoNAn, which do not contain the
@@ -658,7 +658,7 @@ print.result.monan <- function(x, covMat = FALSE, ...) {
 #' significant). It is not corrected for the correlation with the model's
 #' effects and therefore rarely extreme; it is not recommended for testing.
 #'
-#' @return The function `scoreTest` returns an object of class "scoretest.monan"
+#' @return The function `scoreTest` returns an object of class "scoretest.realm"
 #' with, for each tested effect, the t-statistic (`tStatistics`), the two-sided
 #' p-value (`pValues`) and R2 (`R2`), the observed and simulated statistics, and
 #' with nonParametric = TRUE the non-parametric values (`pValuesNonParametric`).
@@ -750,27 +750,27 @@ scoreTest <- function(ans, effects, modelEffects = NULL, nonParametric = FALSE) 
       }))
   }
 
-  class(result.score) <- "scoretest.monan"
+  class(result.score) <- "scoretest.realm"
 
   return(result.score)
 }
 
 
-#' print.scoretest.monan
+#' print.scoretest.realm
 #'
 #' @rdname scoreTest
-#' @param x An object of class "scoretest.monan".
+#' @param x An object of class "scoretest.realm".
 #' @param ... For internal use only.
 #'
 #' @export
 #'
-#' @return The function `print.scoretest.monan` shows the t-statistics, p-values
+#' @return The function `print.scoretest.realm` shows the t-statistics, p-values
 #' and R2 for each tested effect.
 #' @examples
 #' \donttest{
 #' test_ME.2
 #' }
-print.scoretest.monan <- function(x, ...) {
+print.scoretest.realm <- function(x, ...) {
   reslt <-
     data.frame(
       Effects = x$effects$name,

@@ -2,22 +2,22 @@
 % Please edit documentation in R/4_auxiliaryFunctions.R
 \name{extractTraces}
 \alias{extractTraces}
-\alias{plot.traces.monan}
+\alias{plot.traces.realm}
 \title{extractTraces}
 \usage{
 extractTraces(ans, effects)
 
-\method{plot}{traces.monan}(x, ...)
+\method{plot}{traces.realm}(x, ...)
 }
 \arguments{
-\item{ans}{An object of class "result.monan" resulting from an estimation with the function \code{\link[=estimateMobilityNetwork]{estimateMobilityNetwork()}}.}
+\item{ans}{An object of class "result.realm" resulting from an estimation with the function \code{\link[=estimateMobilityNetwork]{estimateMobilityNetwork()}}.}
 
-\item{effects}{An object of class "effectsList.monan" used in the estimation.
+\item{effects}{An object of class "effectsList.realm" used in the estimation.
 If the estimation stored the statistics of the model's effects
 (returnDeps = TRUE), they are used; otherwise the statistics are calculated
 from the simulations stored in ans.}
 
-\item{x}{An object of class "traces.monan".}
+\item{x}{An object of class "traces.realm".}
 
 \item{...}{Additional plotting parameters, use not recommended.}
 }
@@ -28,7 +28,7 @@ The function \code{extractTraces} returns a list that includes
 (3) effect names.
 It is recommended to use the plotting function to inspect the traces.
 
-The function \code{plot.traces.monan} shows a scatter plot of the
+The function \code{plot.traces.realm} shows a scatter plot of the
 statistics of simulated networks from phase three of the estimation.
 }
 \description{

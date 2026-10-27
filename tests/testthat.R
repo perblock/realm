@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(MoNAn)
+library(realm)
 
-test_check("MoNAn")
+test_check("realm")

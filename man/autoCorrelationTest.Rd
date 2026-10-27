@@ -7,7 +7,7 @@
 autoCorrelationTest(ans)
 }
 \arguments{
-\item{ans}{An object of class "result.monan" resulting from an estimation with the function \code{\link[=estimateMobilityNetwork]{estimateMobilityNetwork()}}.}
+\item{ans}{An object of class "result.realm" resulting from an estimation with the function \code{\link[=estimateMobilityNetwork]{estimateMobilityNetwork()}}.}
 }
 \value{
 A number indicating the auto-correlation.

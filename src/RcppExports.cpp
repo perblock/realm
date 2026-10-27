@@ -12,7 +12,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 
 // simulateChainCpp
 Rcpp::List simulateChainCpp(Rcpp::IntegerMatrix edgelist, Rcpp::List cache, Rcpp::List resourceCovariates, Rcpp::IntegerVector resourceSet, Rcpp::IntegerVector nodeSet, Rcpp::List effectSpecs, Rcpp::NumericVector parameters, int burnIn, int iterations, int thinning, bool allowLoops, bool multinomialProposal, bool returnDraws);
-RcppExport SEXP _MoNAn_simulateChainCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP resourceSetSEXP, SEXP nodeSetSEXP, SEXP effectSpecsSEXP, SEXP parametersSEXP, SEXP burnInSEXP, SEXP iterationsSEXP, SEXP thinningSEXP, SEXP allowLoopsSEXP, SEXP multinomialProposalSEXP, SEXP returnDrawsSEXP) {
+RcppExport SEXP _realm_simulateChainCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP resourceSetSEXP, SEXP nodeSetSEXP, SEXP effectSpecsSEXP, SEXP parametersSEXP, SEXP burnInSEXP, SEXP iterationsSEXP, SEXP thinningSEXP, SEXP allowLoopsSEXP, SEXP multinomialProposalSEXP, SEXP returnDrawsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -35,7 +35,7 @@ END_RCPP
 }
 // networkStatisticsCpp
 Rcpp::NumericVector networkStatisticsCpp(Rcpp::IntegerMatrix edgelist, Rcpp::List cache, Rcpp::List resourceCovariates, Rcpp::List effectSpecs);
-RcppExport SEXP _MoNAn_networkStatisticsCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP effectSpecsSEXP) {
+RcppExport SEXP _realm_networkStatisticsCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP effectSpecsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -49,7 +49,7 @@ END_RCPP
 }
 // effectValuesCpp
 Rcpp::NumericVector effectValuesCpp(Rcpp::IntegerMatrix edgelist, Rcpp::List cache, Rcpp::List resourceCovariates, Rcpp::List effectSpec, int i, int j, int edge, int update);
-RcppExport SEXP _MoNAn_effectValuesCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP effectSpecSEXP, SEXP iSEXP, SEXP jSEXP, SEXP edgeSEXP, SEXP updateSEXP) {
+RcppExport SEXP _realm_effectValuesCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP effectSpecSEXP, SEXP iSEXP, SEXP jSEXP, SEXP edgeSEXP, SEXP updateSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -67,7 +67,7 @@ END_RCPP
 }
 // tieSumsCpp
 Rcpp::NumericVector tieSumsCpp(Rcpp::IntegerVector tie, Rcpp::NumericVector values, int nCells);
-RcppExport SEXP _MoNAn_tieSumsCpp(SEXP tieSEXP, SEXP valuesSEXP, SEXP nCellsSEXP) {
+RcppExport SEXP _realm_tieSumsCpp(SEXP tieSEXP, SEXP valuesSEXP, SEXP nCellsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -80,7 +80,7 @@ END_RCPP
 }
 // mpleNewtonCpp
 Rcpp::List mpleNewtonCpp(Rcpp::IntegerMatrix edgelist, Rcpp::List cache, Rcpp::List resourceCovariates, Rcpp::IntegerVector resourceSet, Rcpp::IntegerVector nodeSet, Rcpp::List effectSpecs, Rcpp::NumericVector theta, bool allowLoops, bool derivatives);
-RcppExport SEXP _MoNAn_mpleNewtonCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP resourceSetSEXP, SEXP nodeSetSEXP, SEXP effectSpecsSEXP, SEXP thetaSEXP, SEXP allowLoopsSEXP, SEXP derivativesSEXP) {
+RcppExport SEXP _realm_mpleNewtonCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP resourceSetSEXP, SEXP nodeSetSEXP, SEXP effectSpecsSEXP, SEXP thetaSEXP, SEXP allowLoopsSEXP, SEXP derivativesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -99,7 +99,7 @@ END_RCPP
 }
 // mpleChoiceSetsCpp
 Rcpp::List mpleChoiceSetsCpp(Rcpp::IntegerMatrix edgelist, Rcpp::List cache, Rcpp::List resourceCovariates, Rcpp::IntegerVector resourceSet, Rcpp::IntegerVector nodeSet, Rcpp::List effectSpecs, Rcpp::CharacterVector keyCovariates, bool allowLoops, double maxBytes);
-RcppExport SEXP _MoNAn_mpleChoiceSetsCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP resourceSetSEXP, SEXP nodeSetSEXP, SEXP effectSpecsSEXP, SEXP keyCovariatesSEXP, SEXP allowLoopsSEXP, SEXP maxBytesSEXP) {
+RcppExport SEXP _realm_mpleChoiceSetsCpp(SEXP edgelistSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP resourceSetSEXP, SEXP nodeSetSEXP, SEXP effectSpecsSEXP, SEXP keyCovariatesSEXP, SEXP allowLoopsSEXP, SEXP maxBytesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -118,7 +118,7 @@ END_RCPP
 }
 // mpleEvaluateCpp
 Rcpp::List mpleEvaluateCpp(Rcpp::NumericMatrix X, Rcpp::IntegerVector start, Rcpp::IntegerVector observed, Rcpp::NumericVector weight, Rcpp::NumericVector theta, bool derivatives);
-RcppExport SEXP _MoNAn_mpleEvaluateCpp(SEXP XSEXP, SEXP startSEXP, SEXP observedSEXP, SEXP weightSEXP, SEXP thetaSEXP, SEXP derivativesSEXP) {
+RcppExport SEXP _realm_mpleEvaluateCpp(SEXP XSEXP, SEXP startSEXP, SEXP observedSEXP, SEXP weightSEXP, SEXP thetaSEXP, SEXP derivativesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -134,17 +134,17 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_MoNAn_simulateChainCpp", (DL_FUNC) &_MoNAn_simulateChainCpp, 13},
-    {"_MoNAn_networkStatisticsCpp", (DL_FUNC) &_MoNAn_networkStatisticsCpp, 4},
-    {"_MoNAn_effectValuesCpp", (DL_FUNC) &_MoNAn_effectValuesCpp, 8},
-    {"_MoNAn_tieSumsCpp", (DL_FUNC) &_MoNAn_tieSumsCpp, 3},
-    {"_MoNAn_mpleNewtonCpp", (DL_FUNC) &_MoNAn_mpleNewtonCpp, 9},
-    {"_MoNAn_mpleChoiceSetsCpp", (DL_FUNC) &_MoNAn_mpleChoiceSetsCpp, 9},
-    {"_MoNAn_mpleEvaluateCpp", (DL_FUNC) &_MoNAn_mpleEvaluateCpp, 6},
+    {"_realm_simulateChainCpp", (DL_FUNC) &_realm_simulateChainCpp, 13},
+    {"_realm_networkStatisticsCpp", (DL_FUNC) &_realm_networkStatisticsCpp, 4},
+    {"_realm_effectValuesCpp", (DL_FUNC) &_realm_effectValuesCpp, 8},
+    {"_realm_tieSumsCpp", (DL_FUNC) &_realm_tieSumsCpp, 3},
+    {"_realm_mpleNewtonCpp", (DL_FUNC) &_realm_mpleNewtonCpp, 9},
+    {"_realm_mpleChoiceSetsCpp", (DL_FUNC) &_realm_mpleChoiceSetsCpp, 9},
+    {"_realm_mpleEvaluateCpp", (DL_FUNC) &_realm_mpleEvaluateCpp, 6},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_MoNAn(DllInfo *dll) {
+RcppExport void R_init_realm(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

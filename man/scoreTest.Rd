@@ -2,18 +2,18 @@
 % Please edit documentation in R/4_auxiliaryFunctions.R
 \name{scoreTest}
 \alias{scoreTest}
-\alias{print.scoretest.monan}
+\alias{print.scoretest.realm}
 \title{scoreTest}
 \usage{
 scoreTest(ans, effects, modelEffects = NULL, nonParametric = FALSE)
 
-\method{print}{scoretest.monan}(x, ...)
+\method{print}{scoretest.realm}(x, ...)
 }
 \arguments{
-\item{ans}{An object of class "result.monan" resulting from an estimation with
+\item{ans}{An object of class "result.realm" resulting from an estimation with
 the function \code{\link[=estimateMobilityNetwork]{estimateMobilityNetwork()}} using the option returnDeps = TRUE.}
 
-\item{effects}{An object of class "effectsList.monan" in which the non included
+\item{effects}{An object of class "effectsList.realm" in which the non included
 effects that should be tested are specified.}
 
 \item{modelEffects}{The effects object of the estimated model. Only needed for
@@ -26,17 +26,17 @@ smaller than or equal to the observed one (further away from 0.5 = more
 significant). It is not corrected for the correlation with the model's
 effects and therefore rarely extreme; it is not recommended for testing.}
 
-\item{x}{An object of class "scoretest.monan".}
+\item{x}{An object of class "scoretest.realm".}
 
 \item{...}{For internal use only.}
 }
 \value{
-The function \code{scoreTest} returns an object of class "scoretest.monan"
+The function \code{scoreTest} returns an object of class "scoretest.realm"
 with, for each tested effect, the t-statistic (\code{tStatistics}), the two-sided
 p-value (\code{pValues}) and R2 (\code{R2}), the observed and simulated statistics, and
 with nonParametric = TRUE the non-parametric values (\code{pValuesNonParametric}).
 
-The function \code{print.scoretest.monan} shows the t-statistics, p-values
+The function \code{print.scoretest.realm} shows the t-statistics, p-values
 and R2 for each tested effect.
 }
 \description{

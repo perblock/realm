@@ -2,7 +2,7 @@
 % Please edit documentation in R/3_coreFunctions.R
 \name{createAlgorithm}
 \alias{createAlgorithm}
-\alias{monanAlgorithmCreate}
+\alias{realmAlgorithmCreate}
 \title{createAlgorithm}
 \usage{
 createAlgorithm(
@@ -28,7 +28,7 @@ createAlgorithm(
   finalIterationsGT = NULL
 )
 
-monanAlgorithmCreate(
+realmAlgorithmCreate(
   state,
   effects,
   multinomialProposal = FALSE,
@@ -52,10 +52,10 @@ monanAlgorithmCreate(
 )
 }
 \arguments{
-\item{state}{An object of class "processState.monan" that contains all relevant information about
+\item{state}{An object of class "processState.realm" that contains all relevant information about
 the outcome in the form of an edgelist, the nodesets, and covariates.}
 
-\item{effects}{An object of class "effectsList.monan" that specifies the model.}
+\item{effects}{An object of class "effectsList.realm" that specifies the model.}
 
 \item{multinomialProposal}{How should the next possible outcome in the simulation chains
 be sampled? If TRUE, fewer simulation steps are needed, but each simulation
@@ -141,7 +141,7 @@ the final Geyer-Thompson step, which determines the estimates.
 Defaults to 3 * iterationsGT.}
 }
 \value{
-An object of class "algorithm.monan".
+An object of class "algorithm.realm".
 }
 \description{
 Specifies the algorithm used in the estimation based on characteristics

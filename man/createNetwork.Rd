@@ -35,14 +35,14 @@ be the locations in the data.}
 nodes denote the locations in the edgelist}
 }
 \value{
-An object of class "network.monan".
+An object of class "network.realm".
 }
 \description{
 Defines a network between locations, generally to be used as a predictor in the model.
 NOTE: The outcome variable of the model is not defined as a network, but as an edgelist!
 }
 \examples{
-# create an object of class network.monan
+# create an object of class network.realm
 sameRegion <- outer(orgRegion, orgRegion, "==") * 1
 sameRegion <- createNetwork(sameRegion, nodeSet = c("organisations", "organisations"))
 }

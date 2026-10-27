@@ -2,30 +2,30 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 simulateChainCpp <- function(edgelist, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, parameters, burnIn, iterations, thinning, allowLoops, multinomialProposal, returnDraws) {
-    .Call(`_MoNAn_simulateChainCpp`, edgelist, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, parameters, burnIn, iterations, thinning, allowLoops, multinomialProposal, returnDraws)
+    .Call(`_realm_simulateChainCpp`, edgelist, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, parameters, burnIn, iterations, thinning, allowLoops, multinomialProposal, returnDraws)
 }
 
 networkStatisticsCpp <- function(edgelist, cache, resourceCovariates, effectSpecs) {
-    .Call(`_MoNAn_networkStatisticsCpp`, edgelist, cache, resourceCovariates, effectSpecs)
+    .Call(`_realm_networkStatisticsCpp`, edgelist, cache, resourceCovariates, effectSpecs)
 }
 
 effectValuesCpp <- function(edgelist, cache, resourceCovariates, effectSpec, i, j, edge, update) {
-    .Call(`_MoNAn_effectValuesCpp`, edgelist, cache, resourceCovariates, effectSpec, i, j, edge, update)
+    .Call(`_realm_effectValuesCpp`, edgelist, cache, resourceCovariates, effectSpec, i, j, edge, update)
 }
 
 tieSumsCpp <- function(tie, values, nCells) {
-    .Call(`_MoNAn_tieSumsCpp`, tie, values, nCells)
+    .Call(`_realm_tieSumsCpp`, tie, values, nCells)
 }
 
 mpleNewtonCpp <- function(edgelist, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, theta, allowLoops, derivatives) {
-    .Call(`_MoNAn_mpleNewtonCpp`, edgelist, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, theta, allowLoops, derivatives)
+    .Call(`_realm_mpleNewtonCpp`, edgelist, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, theta, allowLoops, derivatives)
 }
 
 mpleChoiceSetsCpp <- function(edgelist, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, keyCovariates, allowLoops, maxBytes) {
-    .Call(`_MoNAn_mpleChoiceSetsCpp`, edgelist, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, keyCovariates, allowLoops, maxBytes)
+    .Call(`_realm_mpleChoiceSetsCpp`, edgelist, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, keyCovariates, allowLoops, maxBytes)
 }
 
 mpleEvaluateCpp <- function(X, start, observed, weight, theta, derivatives) {
-    .Call(`_MoNAn_mpleEvaluateCpp`, X, start, observed, weight, theta, derivatives)
+    .Call(`_realm_mpleEvaluateCpp`, X, start, observed, weight, theta, derivatives)
 }
 

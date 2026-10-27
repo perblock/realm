@@ -1,8 +1,8 @@
 // Data structures of the C++ MCMC sampler: one chain (edgelist and cache) and
 // the interface of effects. Indices are 0-based; matrices are column-major
 // n x n vectors, as in R.
-#ifndef MONAN_H
-#define MONAN_H
+#ifndef REALM_H
+#define REALM_H
 
 // No fused multiply-add: R rounds a + b * c in two steps, and the C++ effects
 // must give exactly the same values as the R effects. (A pragma rather than

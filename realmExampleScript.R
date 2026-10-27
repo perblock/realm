@@ -1,6 +1,6 @@
-# This script runs a simple example with the data from the MoNAn package
+# This script runs a simple example with the data from the realm package
 
-library(MoNAn)
+library(realm)
 
 
 ##### create data objects from internal data files, 
@@ -13,12 +13,12 @@ N_org <- length(unique(as.numeric(mobilityEdgelist)))
 
 # Create a process state out of the mobility data objects:
 # create objects (which are later combined to the process state)
-transfers <- monanDependent(mobilityEdgelist,
+transfers <- realmDependent(mobilityEdgelist,
                             nodes = "organisations",
                             edges = "people")
 
-people <- monanEdges(N_ind)
-organisations <- monanNodes(N_org)
+people <- realmEdges(N_ind)
+organisations <- realmNodes(N_org)
 
 sameRegion <- outer(orgRegion, orgRegion, "==") * 1
 sameRegion <- dyadicCovar(sameRegion, nodes = "organisations")
@@ -37,7 +37,7 @@ second_or <- monadicCovar(other_origin, edges = "people")
 
 
 # combine created objects to the process state
-myState <- monanDataCreate(transfers,
+myState <- realmDataCreate(transfers,
                            people,
                            organisations,
                            sameRegion,
@@ -86,14 +86,14 @@ myEffects_fe
 ##### create algorithm object #####
 
 # define algorithm based on state and effects characteristics
-myAlg <- monanAlgorithmCreate(myState, myEffects, nsubN2 = 3,
+myAlg <- realmAlgorithmCreate(myState, myEffects, nsubN2 = 3,
                               multinomialProposal = FALSE)
 
 
 ##### estimate mobility network model #####
 
 # mobility network model 
-myResDN <- monanEstimate(
+myResDN <- realmEstimate(
   myState, myEffects, myAlg,
   parallel = TRUE, cpus = 4,
   verbose = TRUE,
@@ -101,7 +101,7 @@ myResDN <- monanEstimate(
   fish = FALSE
 )
 
-# myResDN_fe <- monanEstimate(
+# myResDN_fe <- realmEstimate(
 #   myState, myEffects_fe, myAlg,
 #   initialParameters = NULL,
 #   # in case a pseudo-likelihood estimation was run, replace with
@@ -119,11 +119,10 @@ myResDN_old <- myResDN
 
 # estimate mobility network model again based on previous results to improve convergence
 # with an adjusted algorithm
-myAlg <- monanAlgorithmCreate(myState, myEffects, multinomialProposal = TRUE, 
+myAlg <- realmAlgorithmCreate(myState, myEffects, multinomialProposal = TRUE, 
                               initialIterationsN2 = 100, nsubN2 = 1, initGain = 0.05, iterationsN3 = 1000)
 
-# monan07 is an alias for monanEstimate
-myResDN <- monan07(
+myResDN <- realmEstimate(
   myState, myEffects, myAlg,
   prevAns = myResDN,
   parallel = TRUE, cpus = 4,
@@ -158,12 +157,12 @@ test_ME.2
 
 ##### goodness of fit #####
 
-myGofIndegree <- monanGOF(ans = myResDN, 
+myGofIndegree <- realmGOF(ans = myResDN, 
                           gofFunction = getIndegree, 
                           lvls = 1:100)
 plot(myGofIndegree,  lvls = 20:70)
 
-myGofTieWeight <- monanGOF(ans = myResDN, 
+myGofTieWeight <- realmGOF(ans = myResDN, 
                            gofFunction = getTieWeights, 
                            lvls = 1:30)
 plot(myGofTieWeight, lvls = 1:15)
@@ -171,7 +170,7 @@ plot(myGofTieWeight, lvls = 1:15)
 
 ##### simulate mobility network #####
 
-mySimDN <- monanSimulate(myState,
+mySimDN <- realmSimulate(myState,
                          myEffects,
                          parameters = c(2, 1, 1.5, 0.5, 0.1, -1, -0.5),
                          allowLoops = TRUE,

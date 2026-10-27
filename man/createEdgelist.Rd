@@ -2,12 +2,12 @@
 % Please edit documentation in R/3_coreFunctions.R
 \name{createEdgelist}
 \alias{createEdgelist}
-\alias{monanDependent}
+\alias{realmDependent}
 \title{createEdgelist}
 \usage{
 createEdgelist(el, nodeSet = NULL, nodes = NULL, edges = NULL)
 
-monanDependent(el, nodeSet = NULL, nodes = NULL, edges = NULL)
+realmDependent(el, nodeSet = NULL, nodes = NULL, edges = NULL)
 }
 \arguments{
 \item{el}{An edgelist in the form of a matrix with two columns and N rows.
@@ -25,14 +25,14 @@ nodes denote the locations in the edgelist}
 edges denote the individuals in the edgelist}
 }
 \value{
-An object of class "edgelist.monan".
+An object of class "edgelist.realm".
 }
 \description{
 Creates an edgelist object, which is the standard format of the outcome to be modelled
-by MoNAn.
+by realm.
 }
 \examples{
-# create an object of class edgelist.monan
+# create an object of class edgelist.realm
 transfers <- createEdgelist(mobilityEdgelist, c("organisations", "organisations", "people"))
 }
 \seealso{

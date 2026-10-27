@@ -7,7 +7,7 @@
 addEffect(effectsObject, effectName, ...)
 }
 \arguments{
-\item{effectsObject}{The monan Effects object to which another
+\item{effectsObject}{The realm effects object to which another
 effect should be added.}
 
 \item{effectName}{The name of the effect that should be added (e.g. loops).}
@@ -16,10 +16,10 @@ effect should be added.}
 attribute.index, or resource.attribute.index}
 }
 \value{
-An object of type effectsList.monan
+An object of type effectsList.realm
 }
 \description{
-A function to add additional effects to a monan effects object
+A function to add additional effects to a realm effects object
 }
 \examples{
 # Create effects object and add effects

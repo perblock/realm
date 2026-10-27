@@ -7,9 +7,9 @@
 getMultinomialStatistics(state, effects, cache = NULL)
 }
 \arguments{
-\item{state}{An object of class "processState.monan" that stores all information to be used in the model.}
+\item{state}{An object of class "processState.realm" that stores all information to be used in the model.}
 
-\item{effects}{An object of class "effectsList.monan" for which the statistics of a multinomial
+\item{effects}{An object of class "effectsList.realm" for which the statistics of a multinomial
 model should be calculated.}
 
 \item{cache}{Outdated parameter, no need to specify.}

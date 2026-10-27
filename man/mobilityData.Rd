@@ -7,7 +7,7 @@
 \alias{orgRegion}
 \alias{orgSize}
 \alias{indSex}
-\title{Example Data for the MoNAn Package}
+\title{Example Data for the realm Package}
 \format{
 \code{mobilityEdgelist}
 A data frame with 742 rows and 2 columns.
@@ -22,7 +22,7 @@ An object with 17 values.
 An object with 742 values.
 }
 \description{
-These are example data for the MoNAn package and can be used to estimate a
+These are example data for the realm package and can be used to estimate a
 mobility network. The raw example data is synthetic (i.e., made up).
 This fictitious example contains 17 organisations representing
 a labour market that are located in two regions (north and south).

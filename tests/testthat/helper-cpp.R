@@ -17,13 +17,13 @@ expect_same <- function(object, expected, ...) {
 compare_chains <- function(effects, parameters, n = 5000, allowLoops = TRUE,
                            multinomial = FALSE, state = myState, seed = 42) {
   dv <- state$dep.var
-  oldOptions <- options(MoNAn.useCpp = FALSE)
+  oldOptions <- options(realm.useCpp = FALSE)
   on.exit(options(oldOptions), add = TRUE)
   set.seed(seed)
   r <- simulateNSteps(dv, state, state$cache, effects, parameters,
                       allowLoops = allowLoops, multinomialProposal = multinomial, n = n)
   rNext <- runif(1)
-  options(MoNAn.useCpp = TRUE)
+  options(realm.useCpp = TRUE)
   set.seed(seed)
   cpp <- simulateChain(dv, state, state$cache, effects, parameters,
                        burnIn = n, iterations = 0, thinning = 0,
@@ -71,7 +71,7 @@ expect_cpp_matches_r <- function(effects, state = myState, n = 100, seed = 3) {
     }
   }
   # whole target statistics, which some C++ effects calculate differently
-  old <- options(MoNAn.useCpp = FALSE)
+  old <- options(realm.useCpp = FALSE)
   rStatistics <- getNetworkStatistics(dv, state, state$cache, effects)
   options(old)
   expect_same(cppNetworkStatistics(dv, state, state$cache, effects), rStatistics)

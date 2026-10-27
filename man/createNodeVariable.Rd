@@ -45,14 +45,14 @@ with the same_covariate effect)? In this case, addSame needs to be set to TRUE.}
 with the sim_covariate effect)? In this case, addSim needs to be set to TRUE.}
 }
 \value{
-An object of class "nodeVar.monan".
+An object of class "nodeVar.realm".
 }
 \description{
 Assigns a covariate to one nodeset, i.e., an exogenous characteristic of mobile
 individuals/resources or locations.
 }
 \examples{
-# create an object of class nodeVar.monan
+# create an object of class nodeVar.realm
 region <- createNodeVariable(orgRegion, nodeSet = "organisations")
 size <- createNodeVariable(orgSize, nodeSet = "organisations", addSim = TRUE)
 sex <- createNodeVariable(indSex, nodeSet = "people")

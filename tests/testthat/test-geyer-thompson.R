@@ -62,7 +62,7 @@ test_that("estimation with phase2Method = 'GT' runs and returns a result", {
     res <- estimateMobilityNetwork(myState, myEffects, alg)
   ))
 
-  expect_s3_class(res, "result.monan")
+  expect_s3_class(res, "result.realm")
   expect_named(res$estimates, myEffects$name)
   expect_true(all(is.finite(res$estimates)))
   expect_true(all(is.finite(res$standardErrors)))
@@ -100,7 +100,7 @@ test_that("the C++ pseudo-likelihood equals the R pseudo-likelihood", {
 
 test_that("MPLE is the same with the C++ and the R pseudo-likelihood", {
   dv <- myState$dep.var
-  old <- options(MoNAn.useCpp = FALSE)
+  old <- options(realm.useCpp = FALSE)
   mpleR <- getMPLE(dv, myState, myState$cache, myEffects, allowLoops = TRUE)
   options(old)
   mpleCpp <- getMPLE(dv, myState, myState$cache, myEffects, allowLoops = TRUE)
@@ -169,7 +169,7 @@ test_that("grouped choice sets give the same pseudo-likelihood as recomputing th
 test_that("the MPLE is the same with grouped and recomputed choice sets", {
   dv <- myState$dep.var
   grouped <- getMPLE(dv, myState, myState$cache, myEffects, allowLoops = TRUE)
-  old <- options(MoNAn.mpleMemoryLimit = 0)
+  old <- options(realm.mpleMemoryLimit = 0)
   on.exit(options(old), add = TRUE)
   recomputed <- getMPLE(dv, myState, myState$cache, myEffects, allowLoops = TRUE)
   expect_equal(grouped, recomputed, tolerance = 1e-10)
