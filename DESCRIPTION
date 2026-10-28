@@ -1,6 +1,6 @@
 Package: realm
 Type: Package
-Title: Relational Analysis of Mobility
+Title: Relational Alignment Models
 Version: 0.1.0
 Date: 2026-10-27
 Authors@R: c(person("Per", "Block", role = c("cre", "aut", "cph"), email = "block@soziologie.uzh.ch", 
@@ -9,8 +9,8 @@ Authors@R: c(person("Per", "Block", role = c("cre", "aut", "cph"), email = "bloc
     person("Nico", "Keiser", role = "aut", comment = c(ORCID = "0009-0007-3403-278X")),
     person("Marion", "Hoffman", role = "aut", comment = c(ORCID = "0000-0002-0741-7760")),
     person("Jingying", "Wang", role = "aut"))
-Description: Statistical models for the analysis of weighted mobility
-    networks and distribution networks. Based on the 'MoNAn' package.
+Description: Statistical models for the analysis of relational alignment systems. 
+    Based on the 'MoNAn' package.
 Depends: R (>= 4.2)
 License: GPL (>= 3)
 URL: https://github.com/perblock/realm
