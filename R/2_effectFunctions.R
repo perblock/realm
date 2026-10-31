@@ -62,6 +62,45 @@ sameNodeSetEffects <- c(
 # must be given
 originAttributeEffects <- c("same_covariate", "sim_covariate")
 
+# checkCovariate
+# checks that `name` is a covariate of the state with the nodesets
+# `nodeSets`: one nodeset for a covariate of locations or resources
+# (createNodeVariable()), two for a dyadic covariate (createNetwork()), NULL
+# if any covariate will do (effects without an entry in attributeRoles), and
+# that its data have the size of these nodesets. Effects index the data
+# directly (data[j], data[i, j], data[edge]), so a nodeset, the dependent
+# variable or a covariate of the wrong kind or size would give wrong
+# statistics, or read outside the data in C++.
+checkCovariate <- function(effectName, argument, name, state, nodeSets) {
+  covar <- if (name %in% names(state) && !(name %in% nonCovariates(state))) state[[name]]
+  isCovariate <- inherits(covar, "nodeVar.realm") || inherits(covar, "network.realm")
+  dyadic <- length(nodeSets) == 2
+  needed <- if (is.null(nodeSets)) "a covariate" else if (dyadic) {
+    paste0("a dyadic covariate that applies to the nodesets '", nodeSets[1], "' x '",
+           nodeSets[2], "'")
+  } else {
+    paste0("a covariate that applies to the nodeset '", nodeSets, "'")
+  }
+  fail <- function() {
+    stop(paste0("Effect ", effectName, ": ", argument, " must be ", needed,
+                ". Input that caused the error: '", name, "'"), call. = FALSE)
+  }
+  if (!isCovariate) fail()
+  if (is.null(nodeSets)) {
+    return(invisible(NULL))
+  }
+  if (!inherits(covar, if (dyadic) "network.realm" else "nodeVar.realm") ||
+      !identical(as.character(covar$nodeSet), nodeSets)) {
+    fail()
+  }
+  sizes <- vapply(nodeSets, function(n) length(state[[n]]$ids), numeric(1))
+  size <- if (dyadic) dim(covar$data) else length(covar$data)
+  if (!identical(as.numeric(size), unname(sizes))) {
+    fail()
+  }
+  invisible(NULL)
+}
+
 # checkEffectNodeSets
 # checks that the origin of an effect is in the state, and that the effect's
 # origin and covariates have the nodesets the effect needs
@@ -86,39 +125,23 @@ checkEffectNodeSets <- function(effectName, args, state) {
                 "locations with origin.attribute."))
   }
   if (is.character(args$origin.attribute.index)) {
-    actual <- state[[args$origin.attribute.index]]$nodeSet
-    if (!identical(as.character(actual), originSet)) {
-      stop(paste0("Effect ", effectName, ": the covariate '", args$origin.attribute.index,
-                  "' must be defined for ", originSet, ", not for ",
-                  paste(actual, collapse = " x "), "."))
-    }
+    checkCovariate(effectName, "origin.attribute", args$origin.attribute.index, state, originSet)
   }
   if (isTRUE(args$exclude.loops) && !identical(originSet, destinations)) {
     stop(paste0("Effect ", effectName, ": exclude.loops needs an origin with the nodeset of ",
                 "the destinations (", destinations, "); other origins have no loops."))
   }
-  role <- attributeRoles[effectName]
-  if (!is.na(role) && is.character(args$attribute.index)) {
-    expected <- switch(role,
-                       destination = destinations,
-                       origin = originSet,
-                       dyad = c(originSet, destinations))
-    actual <- state[[args$attribute.index]]$nodeSet
-    if (role == "dyad" && length(actual) == 1) {
-      actual <- c(actual, actual)
-    }
-    if (!identical(as.character(actual), expected)) {
-      stop(paste0("Effect ", effectName, ": the covariate '", args$attribute.index,
-                  "' must be defined for ", paste(expected, collapse = " x "),
-                  ", not for ", paste(actual, collapse = " x "), "."))
-    }
+  if (is.character(args$attribute.index)) {
+    role <- attributeRoles[effectName]
+    nodeSets <- if (is.na(role)) NULL else switch(role,
+                                                  destination = destinations,
+                                                  origin = originSet,
+                                                  dyad = c(originSet, destinations))
+    checkCovariate(effectName, "node.attribute", args$attribute.index, state, nodeSets)
   }
   if (is.character(args$resource.attribute.index)) {
-    actual <- state[[args$resource.attribute.index]]$nodeSet
-    if (!identical(as.character(actual), resourceNodeSet(state))) {
-      stop(paste0("Effect ", effectName, ": the covariate '", args$resource.attribute.index,
-                  "' must be defined for ", resourceNodeSet(state), "."))
-    }
+    checkCovariate(effectName, "edge.attribute", args$resource.attribute.index, state,
+                   resourceNodeSet(state))
   }
   invisible(NULL)
 }

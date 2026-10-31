@@ -413,18 +413,6 @@ createEffectsObject <-
       formals(effects[[i]]) <- unlist(signatures[i], recursive = FALSE)
     }
 
-    # If a process state is provided, check whether all params refer to existing objects
-    if (!is.null(checkProcessState)) {
-      stateNames <- names(checkProcessState)
-      params <- unlist(signatures)
-      refs <- unique(params[names(params) %in% c("attribute.index", "origin.attribute.index")])
-      for (r in refs) {
-        if (!(r %in% stateNames)) {
-          stop(paste("Unknown process state reference:", r))
-        }
-      }
-    }
-
     effectslist <- list(
       effectFormulas = effects,
       name = unlist(effectNames)
@@ -753,6 +741,10 @@ createProcessState <- function(elements, dependentVariable) {
   }
   if (is.null(names(elements))) {
     stop("List must be named.")
+  }
+  if (anyDuplicated(names(elements))) {
+    stop(paste("The names of the elements must be unique; used more than once:",
+               paste(unique(names(elements)[duplicated(names(elements))]), collapse = ", ")))
   }
 
   nodeSetIDs <- c()

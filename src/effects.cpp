@@ -42,6 +42,33 @@ std::vector<double> attributeOf(const Rcpp::List& spec) {
   return std::vector<double>(a.begin(), a.end());
 }
 
+// the covariates of an effect with the size the effect reads: one value per
+// destination, per location of the effect's origin, or per pair of them.
+// checkEffectInputs() checks this in R; this check keeps a wrong covariate
+// from reading outside the data.
+std::vector<double> sizedAs(std::vector<double> a, size_t size, const std::string& name,
+                            const char* what) {
+  if (a.size() != size) Rcpp::stop("the covariate of %s must have %s", name, what);
+  return a;
+}
+int originRows(const Rcpp::List& spec, const Chain& chain) {
+  return chain.origins[Rcpp::as<int>(spec["origin"])].nRow;
+}
+std::vector<double> destinationCovariate(const Rcpp::List& spec, const Chain& chain,
+                                         const std::string& name) {
+  return sizedAs(attributeOf(spec), chain.n, name, "one value per destination");
+}
+std::vector<double> originCovariate(const Rcpp::List& spec, const Chain& chain,
+                                    const std::string& name) {
+  return sizedAs(attributeOf(spec), originRows(spec, chain), name,
+                 "one value per location of the origin");
+}
+std::vector<double> dyadicCovariate(const Rcpp::List& spec, const Chain& chain,
+                                    const std::string& name) {
+  return sizedAs(attributeOf(spec), (size_t)originRows(spec, chain) * chain.n, name,
+                 "one value per pair of origin location and destination");
+}
+
 // concentration_AC (R/2c_effectFunctions_concentration.R)
 class ConcentrationAC : public Effect {
   double alpha;
@@ -787,14 +814,14 @@ std::unique_ptr<Effect> makeEffectFor(const Rcpp::List& spec, const Chain& chain
   if (name == "concentration_AC") {
     return E(new ConcentrationAC(alphaOf(spec, "concentration_AC")));
   }
-  if (name == "dyadic_covariate") return E(new DyadicCovariate(attributeOf(spec)));
+  if (name == "dyadic_covariate") return E(new DyadicCovariate(dyadicCovariate(spec, chain, name)));
   if (name == "alter_covariate") {
-    return E(new AlterCovariate(attributeOf(spec)));
+    return E(new AlterCovariate(destinationCovariate(spec, chain, name)));
   }
   if (name == "resource_covar_to_node_covar") {
     return E(new ResourceCovarToNodeCovar(
       chain.resourceIndex(Rcpp::as<std::string>(spec["resourceAttribute"])),
-      attributeOf(spec)));
+      destinationCovariate(spec, chain, name)));
   }
   if (name == "loops_resource_covar") {
     return E(new LoopsResourceCovar(
@@ -811,11 +838,11 @@ std::unique_ptr<Effect> makeEffectFor(const Rcpp::List& spec, const Chain& chain
       chain.resourceIndex(Rcpp::as<std::string>(spec["resourceAttribute"])),
       name == "loops_x_loops_additional_origin"));
   }
-  if (name == "loops_node_covar") return E(new LoopsNodeCovar(attributeOf(spec)));
+  if (name == "loops_node_covar") return E(new LoopsNodeCovar(originCovariate(spec, chain, name)));
   if (name == "loops_resource_covar_node_covar") {
     return E(new LoopsResourceCovarNodeCovar(
       chain.resourceIndex(Rcpp::as<std::string>(spec["resourceAttribute"])),
-      attributeOf(spec)));
+      originCovariate(spec, chain, name)));
   }
   if (name == "concentration_GW" || name == "concentration_AC_dyad_covar" ||
       name == "concentration_GW_dyad_covar" ||
@@ -860,7 +887,7 @@ std::unique_ptr<Effect> makeEffectFor(const Rcpp::List& spec, const Chain& chain
     if (Rcpp::as<bool>(spec["attributeIsMatrix"])) {
       Rcpp::stop("attribute in concentration_prop_orig_cov must be monadic");
     }
-    return E(new ConcentrationPropOrigCov(attributeOf(spec)));
+    return E(new ConcentrationPropOrigCov(originCovariate(spec, chain, name)));
   }
   if (name == "concentration_rankGW") {
     double lambda = Rcpp::as<double>(spec["lambda"]);
@@ -874,15 +901,18 @@ std::unique_ptr<Effect> makeEffectFor(const Rcpp::List& spec, const Chain& chain
   if (name == "same_covariate" || name == "sim_covariate") {
     if (spec.containsElementNamed("originAttribute")) {
       Rcpp::NumericVector a = spec["originAttribute"];
-      return E(new CovariateComparison(name == "sim_covariate",
-                                       std::vector<double>(a.begin(), a.end()),
-                                       attributeOf(spec)));
+      return E(new CovariateComparison(
+        name == "sim_covariate",
+        sizedAs(std::vector<double>(a.begin(), a.end()), originRows(spec, chain), name,
+                "one value per location of the origin"),
+        destinationCovariate(spec, chain, name)));
     }
-    return E(new DyadicCovariate(attributeOf(spec)));
+    return E(new DyadicCovariate(dyadicCovariate(spec, chain, name)));
   }
   if (name == "dyadic_covariate_resource_attribute") {
     return E(new DyadicCovariateResourceAttribute(
-      attributeOf(spec), chain.resourceIndex(Rcpp::as<std::string>(spec["resourceAttribute"]))));
+      dyadicCovariate(spec, chain, name),
+      chain.resourceIndex(Rcpp::as<std::string>(spec["resourceAttribute"]))));
   }
   if (name == "in_ties_loops") return E(new InTiesLoops());
   if (name == "present_relations") return E(new PresentRelations());

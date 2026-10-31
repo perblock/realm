@@ -165,11 +165,11 @@ test_that("effects that depend on an origin need a valid one", {
   expect_error(createEffects(twoOrigins) |>
                  addEffect(sim_covariate, origin = "originRegion", node.attribute = "size",
                            origin.attribute = "size"),
-               "must be defined for regions")
+               "must be a covariate that applies to the nodeset 'regions'")
   expect_error(createEffects(twoOrigins) |>
                  addEffect(sim_covariate, origin = "originRegion", node.attribute = "regionSize",
                            origin.attribute = "regionSize"),
-               "must be defined for organisations")
+               "must be a covariate that applies to the nodeset 'organisations'")
 })
 
 test_that("loops can only be excluded for an origin with the nodeset of the destinations", {
@@ -185,19 +185,20 @@ test_that("covariates must have the nodesets of their role in the effect", {
   expect_error(createEffects(twoOrigins) |>
                  addEffect(concentration_prop_orig_cov, origin = "originRegion",
                            node.attribute = "size"),
-               "must be defined for regions")
+               "must be a covariate that applies to the nodeset 'regions'")
   # a regions x organisations network for an origin in organisations
   expect_error(createEffects(twoOrigins) |>
                  addEffect(dyadic_covariate, origin = "origin",
                            node.attribute = "sameRegionRegion"),
-               "must be defined for organisations x organisations")
+               paste("must be a dyadic covariate that applies to the nodesets",
+                     "'organisations' x 'organisations'"))
   # a covariate of the origins where one of the destinations is needed
   expect_error(createEffects(twoOrigins) |> addEffect(alter_covariate, node.attribute = "regionSize"),
-               "must be defined for organisations")
+               "must be a covariate that applies to the nodeset 'organisations'")
   expect_error(createEffects(twoOrigins) |>
                  addEffect(loops_resource_covar, origin = "origin",
                            edge.attribute = "size"),
-               "must be defined for people")
+               "must be a covariate that applies to the nodeset 'people'")
 })
 
 test_that("every effect with a node attribute declares its role", {

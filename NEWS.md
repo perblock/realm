@@ -50,3 +50,10 @@
   `addEffect(same_covariate, origin = "originRegion", node.attribute =
   "orgRegion", origin.attribute = "regionId")`. The similarity uses the range
   of both covariates. Without it, the effects work as before.
+- Effects check that their covariates are covariates of the state of the
+  kind and size they read: a covariate (`createNodeVariable()`) of the
+  destinations or the origin's locations, or a dyadic covariate
+  (`createNetwork()`) between them, as the effect requires. Before, a node
+  variable given as a dyadic covariate passed the checks and the C++ sampler
+  read outside its data. The C++ effects also check the size of their
+  covariates, and the elements of a process state must have unique names.
