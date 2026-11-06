@@ -396,14 +396,20 @@ plot.traces.realm <- function(x, ...) {
 #' myEffects
 print.effectsList.realm <- function(x, ...) {
   
-  df <- as.data.frame(matrix(nrow = 0, ncol = 4))
-  colnames(df) <- c("name", paste0("covariate_", x$nodeset1), paste0("covariate_", x$nodeset2), "parameter")
+  df <- as.data.frame(matrix(nrow = 0, ncol = 5))
+  colnames(df) <- c("name", "origin", paste0("covariate_", x$nodeset1), paste0("covariate_", x$nodeset2), "parameter")
   
   if (length(x$name) != 0) { # if the effects object includes effects, fill table
     
     for (i in 1:length(x[["name"]])) {
       
-      df[nrow(df) + 1, ]$name <- x[["name"]][i]
+      df[nrow(df) + 1, ]$name <- strsplit(x[["name"]][i], split = " ")[[1]][1]
+      
+      if (!is.null(formals(x[["effectFormulas"]][[i]])[["origin"]])) {
+        df[nrow(df), ]$origin <- formals(x[["effectFormulas"]][[i]])[["origin"]]
+      } else {
+        df[nrow(df), ]$origin <- "-"
+      }
       
       if (!is.null(formals(x[["effectFormulas"]][[i]])[["attribute.index"]])) {
         df[nrow(df), paste0("covariate_", x$nodeset1)] <- formals(x[["effectFormulas"]][[i]])[["attribute.index"]]
@@ -423,6 +429,10 @@ print.effectsList.realm <- function(x, ...) {
       if (!is.null(formals(x[["effectFormulas"]][[i]])[["lambda"]])) {
         df[nrow(df), ]$parameter <- formals(x[["effectFormulas"]][[i]])[["lambda"]]
       }
+      # the dummy of the origin, marked as such
+      if (is.numeric(formals(x[["effectFormulas"]][[i]])[["dummy.value"]])) {
+        df[nrow(df), ]$parameter <- paste("d", formals(x[["effectFormulas"]][[i]])[["dummy.value"]])
+      }
       if (is.na(df[nrow(df), ]$parameter)) {
         df[nrow(df), ]$parameter <- "-"
       }
@@ -430,29 +440,16 @@ print.effectsList.realm <- function(x, ...) {
     }
     rownames(df) <- c(1:nrow(df))
     
-    colnames(df) <- c("effect name", paste0("cov. ", x$nodeset1), paste0("cov. ", x$nodeset2), "parameter")
+    colnames(df) <- c("effect name", "origin", paste0("cov. ", x$nodeset1), paste0("cov. ", x$nodeset2), "parameter")
     
     names(df)[1] <- format(names(df)[1], 
                            width = max(nchar(names(df[1])), max(nchar(df[,1]))),
                            justify = "left")
-    names(df)[2] <- format(names(df)[2], 
-                           width = max(nchar(names(df[2])), max(nchar(df[,2]))),
-                           justify = "centre")
-    names(df)[3] <- format(names(df)[3], 
-                           width = max(nchar(names(df[3])), max(nchar(df[,3]))),
-                           justify = "centre")
-    names(df)[4] <- format(names(df)[4], 
-                           width = max(nchar(names(df[3])), max(nchar(df[,3]))),
-                           justify = "centre")
-    df[,2] <- format(df[,2], 
-                     width = max(nchar(names(df[2])), max(nchar(df[,2]))),
-                     justify = "centre")
-    df[,3] <- format(df[,3], 
-                     width = max(nchar(names(df[3])), max(nchar(df[,3]))),
-                     justify = "centre")
-    df[,4] <- format(df[,4], 
-                     width = max(nchar(names(df[3])), max(nchar(df[,3]))),
-                     justify = "centre")
+    for (k in 2:5) {
+      width <- max(nchar(names(df[k])), max(nchar(df[,k])))
+      names(df)[k] <- format(names(df)[k], width = width, justify = "centre")
+      df[,k] <- format(df[,k], width = width, justify = "centre")
+    }
     df[,1] <- format(df[,1], justify = "left")
     
     cat("Effects\n")

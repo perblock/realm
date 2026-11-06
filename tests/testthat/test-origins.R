@@ -339,13 +339,17 @@ test_that("origin_to_node_covar needs the dummies of the origin", {
                "specify the origin")
 })
 
-test_that("printing effects shows the full effect names", {
+test_that("printing effects shows the effect, its origin and the dummy", {
   effects <- createEffects(twoOrigins) |>
     addEffect(concentration_AC, origin = "origin", alpha = 4) |>
-    addEffect(concentration_AC, origin = "originRegion", alpha = 4) |>
+    addEffect(concentration_AC, origin = "originRegion", alpha = 24) |>
+    addEffect(alter_covariate, node.attribute = "size") |>
     addEffect(origin_to_node_covar, origin = "originRegion", node.attribute = "size",
               dummy.value = 2)
-  expect_output(print(effects), "concentration_AC origin 4")
-  expect_output(print(effects), "concentration_AC originRegion 4")
-  expect_output(print(effects), "origin_to_node_covar originRegion 2 to size")
+  printed <- capture.output(print(effects))
+  expect_match(printed[2], "effect name +origin +cov. organisations +cov. people +parameter")
+  expect_match(printed[3], "^ concentration_AC +origin +- +- +4 *$")
+  expect_match(printed[4], "^ concentration_AC +originRegion +- +- +24 *$")
+  expect_match(printed[5], "^ alter_covariate +- +size +- +- *$")
+  expect_match(printed[6], "^ origin_to_node_covar +originRegion +size +- +d 2 *$")
 })

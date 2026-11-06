@@ -73,4 +73,5 @@
   e.g. `node.attribute = "size"`.
 - `addDummyEffects()` only adds the dummies created by `realmDataCreate()`
   (`dummy2`, `dummy3`, ...), not every covariate with "dummy" in its name.
-- Printing an effects object shows the full effect names, including the origin.
+- Printing an effects object shows the origin of each effect in a column of
+  its own, and the dummy of `origin_to_node_covar` under parameter (`d 2`).
