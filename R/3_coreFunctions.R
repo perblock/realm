@@ -699,6 +699,110 @@ createNodeVariable <-
 monadicCovar <- createNodeVariable
 
 
+#' createNodeVariables
+#'
+#' Creates covariates of one nodeset, i.e., exogenous characteristics of mobile
+#' individuals/resources or locations, from a data.frame or a vector. This is
+#' the general way to create covariates: each column of a data.frame becomes one
+#' covariate named by the column, and a vector becomes one covariate as with
+#' [createNodeVariable()].
+#'
+#' @param data A data.frame, or a matrix with column names, with one numeric
+#' column per covariate and one row per element of the nodeset, in the order of
+#' the nodeset; or a vector with the covariate value of each element. Effects
+#' refer to the covariates of a data.frame by its column names, e.g.
+#' node.attribute = "size", and to the covariate of a vector by the name of the
+#' object it is assigned to.
+#' @param nodeSet The nodeset to which the covariates apply.
+#' @param nodes Alternative way to specify the nodeSet by naming nodes or edges: 
+#' nodes denote the locations
+#' @param edges Alternative way to specify the nodeSet by naming nodes or edges: 
+#' edges denote the individuals
+#' @param addSame,addSim See [createNodeVariable()]; they apply to all covariates.
+#' 
+#' @return For a vector, an object of class "nodeVar.realm". For a data.frame or
+#' matrix, an object of class "nodeVarSet.realm", which [createProcessState()]
+#' and [realmDataCreate()] replace by one covariate for each column.
+#' @export
+#'
+#' @seealso [createNodeVariable()], [createProcessState()]
+#'
+#' @examples
+#' # several covariates of the organisations
+#' orgData <- data.frame(region = orgRegion, size = orgSize)
+#' orgCovariates <- createNodeVariables(orgData, nodes = "organisations")
+#' 
+#' # one covariate, called sex in the process state
+#' sex <- createNodeVariables(indSex, edges = "people")
+createNodeVariables <-
+  function(data,
+           nodeSet = NULL,
+           nodes = NULL,
+           edges = NULL,
+           addSame = NULL,
+           addSim = NULL) {
+    if (!is.data.frame(data) && !is.matrix(data)) {
+      return(createNodeVariable(covariateValues(data, deparse(substitute(data))[1]),
+                                nodeSet = nodeSet, nodes = nodes, edges = edges,
+                                addSame = addSame, addSim = addSim))
+    }
+    columns <- colnames(data)
+    if (is.null(columns) || anyNA(columns) || any(columns == "") ||
+        anyDuplicated(columns) || ncol(data) == 0) {
+      stop("createNodeVariables: all columns must have a name, and the names must be unique.")
+    }
+    data <- as.data.frame(data, optional = TRUE)
+    variables <- lapply(columns, function(column) {
+      createNodeVariable(covariateValues(data[[column]], column),
+                         nodeSet = nodeSet, nodes = nodes, edges = edges,
+                         addSame = addSame, addSim = addSim)
+    })
+    names(variables) <- columns
+    l <- list(variables = variables, nodeSet = variables[[1]]$nodeSet)
+    class(l) <- "nodeVarSet.realm"
+    l
+  }
+
+#' monadicCovars
+#' 
+#' @rdname createNodeVariables
+monadicCovars <- createNodeVariables
+
+
+# covariateValues
+# the numeric values of a covariate, without attributes (e.g. the labels of
+# columns from survey files)
+covariateValues <- function(x, name) {
+  if (is.factor(x) || !(is.numeric(unclass(x)) || is.logical(unclass(x)))) {
+    stop(paste0("createNodeVariables: covariates must be numeric; recode them first. ",
+                "Input that caused the error: '", name, "'"))
+  }
+  as.vector(unclass(x))
+}
+
+
+# unpackNodeVariables
+# replaces the elements of class nodeVarSet.realm by their covariates, named by
+# the columns
+unpackNodeVariables <- function(elements) {
+  unpacked <- list()
+  for (k in seq_along(elements)) {
+    if (inherits(elements[[k]], "nodeVarSet.realm")) {
+      variables <- elements[[k]]$variables
+      reserved <- intersect(names(variables), c("dep.var", "origins", "cache"))
+      if (length(reserved) > 0) {
+        stop(paste0("createNodeVariables: this name cannot be used for a covariate. ",
+                    "Input that caused the error: '", reserved[1], "'"))
+      }
+      unpacked <- c(unpacked, variables)
+    } else {
+      unpacked <- c(unpacked, elements[k])
+    }
+  }
+  unpacked
+}
+
+
 #' createProcessState
 #'
 #' Creates the "Process state", i.e., a realm object that stores all information
@@ -708,7 +812,8 @@ monadicCovar <- createNodeVariable
 #'
 #' @param elements A named list of the outcome variable (destinations), the
 #' origins, the nodesets, and all covariates that contain the information about
-#' the data that will be used in the estimation.
+#' the data that will be used in the estimation. Covariates created from a
+#' data.frame with [createNodeVariables()] become one element for each column.
 #' @param dependentVariable The name of the outcome variable (destinations) as
 #' specified under "elements". This indicates what outcome
 #' the researcher is interested in.
@@ -760,6 +865,7 @@ createProcessState <- function(elements, dependentVariable) {
   if (is.null(names(elements))) {
     stop("List must be named.")
   }
+  elements <- unpackNodeVariables(elements)
   if (anyDuplicated(names(elements))) {
     stop(paste("The names of the elements must be unique; used more than once:",
                paste(unique(names(elements)[duplicated(names(elements))]), collapse = ", ")))

@@ -11,7 +11,8 @@ realmDataCreate(..., fixedEffectDummies = FALSE)
 This must include exactly one dependent variable (destinations, see
 \code{\link[=createDependent]{createDependent()}}), at least one origin (see \code{\link[=createOrigin]{createOrigin()}}), and the
 nodesets associated with them.
-Further allowed elements are (monadic or dyadic) covariates of locations and people}
+Further allowed elements are (monadic or dyadic) covariates of locations and people,
+also several at once from a data.frame (see \code{\link[=createNodeVariables]{createNodeVariables()}}).}
 
 \item{fixedEffectDummies}{Add dummy variable for each location (minus the first)
 in the process state (data object), so that fixed effects to control the

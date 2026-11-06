@@ -9,7 +9,8 @@ createProcessState(elements, dependentVariable)
 \arguments{
 \item{elements}{A named list of the outcome variable (destinations), the
 origins, the nodesets, and all covariates that contain the information about
-the data that will be used in the estimation.}
+the data that will be used in the estimation. Covariates created from a
+data.frame with \code{\link[=createNodeVariables]{createNodeVariables()}} become one element for each column.}
 
 \item{dependentVariable}{The name of the outcome variable (destinations) as
 specified under "elements". This indicates what outcome

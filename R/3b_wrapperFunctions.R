@@ -25,7 +25,7 @@ addDummyEffects <- function(effectsObject, state){
   if(stateName != effectsObject$state){
     stop("in addDummyEffects: this is not the state specified in the effectsObject")
   }
-  dummies_to_include <- names(state)[grep("dummy", names(state))]
+  dummies_to_include <- names(state)[grep("^dummy[0-9]+$", names(state))]
   for (i in dummies_to_include){
     effectsObject <- addEffect(effectsObject, 
                                alter_covariate, 
@@ -131,7 +131,8 @@ createEffects <- function(state){
 #' This must include exactly one dependent variable (destinations, see
 #' [createDependent()]), at least one origin (see [createOrigin()]), and the
 #' nodesets associated with them.
-#' Further allowed elements are (monadic or dyadic) covariates of locations and people
+#' Further allowed elements are (monadic or dyadic) covariates of locations and people,
+#' also several at once from a data.frame (see [createNodeVariables()]).
 #' @param fixedEffectDummies Add dummy variable for each location (minus the first)
 #' in the process state (data object), so that fixed effects to control the
 #' indegree of every location can be modelled directly. The dummies are named

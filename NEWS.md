@@ -66,3 +66,10 @@
   "occ_covar")` adds one effect per dummy of the origin (value 1 is the
   reference), named e.g. `origin_to_node_covar or_educat 2 to occ_covar`, and
   reports the number of effects.
+- New function `createNodeVariables()`, with the alias `monadicCovars()`, as
+  the one function to create covariates: from a data.frame, each column
+  becomes a covariate named by the column; from a vector, it gives one
+  covariate as `createNodeVariable()`. Effects refer to the columns by name,
+  e.g. `node.attribute = "size"`.
+- `addDummyEffects()` only adds the dummies created by `realmDataCreate()`
+  (`dummy2`, `dummy3`, ...), not every covariate with "dummy" in its name.
