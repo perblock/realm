@@ -338,3 +338,14 @@ test_that("origin_to_node_covar needs the dummies of the origin", {
   expect_error(createEffects(myState) |> addEffect(origin_to_node_covar, node.attribute = "size"),
                "specify the origin")
 })
+
+test_that("printing effects shows the full effect names", {
+  effects <- createEffects(twoOrigins) |>
+    addEffect(concentration_AC, origin = "origin", alpha = 4) |>
+    addEffect(concentration_AC, origin = "originRegion", alpha = 4) |>
+    addEffect(origin_to_node_covar, origin = "originRegion", node.attribute = "size",
+              dummy.value = 2)
+  expect_output(print(effects), "concentration_AC origin 4")
+  expect_output(print(effects), "concentration_AC originRegion 4")
+  expect_output(print(effects), "origin_to_node_covar originRegion 2 to size")
+})

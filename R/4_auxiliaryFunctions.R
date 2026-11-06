@@ -403,7 +403,7 @@ print.effectsList.realm <- function(x, ...) {
     
     for (i in 1:length(x[["name"]])) {
       
-      df[nrow(df) + 1, ]$name <- strsplit(x[["name"]][i], split = " ")[[1]][1]
+      df[nrow(df) + 1, ]$name <- x[["name"]][i]
       
       if (!is.null(formals(x[["effectFormulas"]][[i]])[["attribute.index"]])) {
         df[nrow(df), paste0("covariate_", x$nodeset1)] <- formals(x[["effectFormulas"]][[i]])[["attribute.index"]]
