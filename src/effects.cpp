@@ -129,6 +129,23 @@ class ResourceCovarToNodeCovar : public Effect {
   }
 };
 
+// origin_to_node_covar (R/2a_effectFunctions_exogenous.R); value is the
+// (0-based) origin value of the effect
+class OriginToNodeCovar : public Effect {
+  std::vector<double> attribute;
+  int value;
+ public:
+  OriginToNodeCovar(std::vector<double> a, int v) : attribute(std::move(a)), value(v) {}
+  double change(const Chain& ch, int i, int j, int edge, int update) const override {
+    if (i != value) return 0;
+    return update * attribute[j];
+  }
+  double target(const Chain& ch, int i, int j) const override {
+    if (i != value) return 0;
+    return net(ch).v(i, j) * attribute[j];
+  }
+};
+
 // loops_resource_covar (R/2b_effectFunctions_loops.R)
 class LoopsResourceCovar : public Effect {
   int resource;
@@ -822,6 +839,10 @@ std::unique_ptr<Effect> makeEffectFor(const Rcpp::List& spec, const Chain& chain
     return E(new ResourceCovarToNodeCovar(
       chain.resourceIndex(Rcpp::as<std::string>(spec["resourceAttribute"])),
       destinationCovariate(spec, chain, name)));
+  }
+  if (name == "origin_to_node_covar") {
+    return E(new OriginToNodeCovar(destinationCovariate(spec, chain, name),
+                                   (int)Rcpp::as<double>(spec["dummyValue"]) - 1));
   }
   if (name == "loops_resource_covar") {
     return E(new LoopsResourceCovar(

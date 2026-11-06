@@ -6,6 +6,7 @@
 # effects with a C++ version
 cppEffects <- c("loops", "concentration_AC", "dyadic_covariate",
                 "alter_covariate", "resource_covar_to_node_covar",
+                "origin_to_node_covar",
                 "loops_resource_covar",
                 "loops_AC", "loops_GW", "loops_additional_origin",
                 "loops_x_loops_additional_origin", "loops_node_covar",
@@ -48,6 +49,9 @@ cppEffectSpec <- function(effects, state) {
     }
     if (!is.null(args$lambda)) {
       spec$lambda <- as.numeric(args$lambda)
+    }
+    if (is.numeric(args$dummy.value)) {
+      spec$dummyValue <- as.numeric(args$dummy.value)
     }
     if (!is.null(args$exclude.loops)) {
       spec$excludeLoops <- as.logical(args$exclude.loops)

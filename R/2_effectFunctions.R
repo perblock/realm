@@ -36,6 +36,7 @@ deprecatedEffects <- c(
 # dyadic covariate between both (used for [i, j])
 attributeRoles <- c(
   alter_covariate = "destination",
+  origin_to_node_covar = "destination",
   resource_covar_to_node_covar = "destination",
   same_covariate = "destination",
   sim_covariate = "destination",
@@ -61,6 +62,47 @@ sameNodeSetEffects <- c(
 # an origin of another nodeset than the destinations, the origin's covariate
 # must be given
 originAttributeEffects <- c("same_covariate", "sim_covariate")
+
+# expandOriginDummies
+# origin_to_node_covar without dummy.value stands for one effect for each dummy
+# of the origin: replaces its specification by one for each dummy and reports
+# the number of effects
+expandOriginDummies <- function(effectInit, state) {
+  expanded <- list()
+  for (x in effectInit) {
+    if (!is.list(x) || !identical(x[[1]], "origin_to_node_covar") ||
+        !is.null(x$dummy.value) || !is.character(x$origin)) {
+      expanded[[length(expanded) + 1]] <- x
+      next
+    }
+    if (is.null(state)) {
+      stop("Effect origin_to_node_covar needs a process state or a dummy.value.")
+    }
+    if (!is.character(x$attribute.index)) {
+      stop("Effect origin_to_node_covar: node.attribute must be specified.")
+    }
+    if (!(x$origin %in% state$origins)) {
+      stop(paste0("Effect origin_to_node_covar: '", x$origin, "' is not an origin of the state."))
+    }
+    if (is.null(state[[x$origin]]$dummy)) {
+      stop(paste0("Effect origin_to_node_covar: the origin '", x$origin, "' has no dummies; ",
+                  "create it with addDummies = TRUE."))
+    }
+    values <- colnames(state[[x$origin]]$dummy)
+    if (length(values) == 0) {
+      stop(paste0("Effect origin_to_node_covar: the origin '", x$origin,
+                  "' has no values larger than 1, so there are no dummies."))
+    }
+    for (value in values) {
+      expanded[[length(expanded) + 1]] <- c(x, list(dummy.value = as.numeric(value)))
+    }
+    cat(paste0("origin_to_node_covar: ", length(values), " dummy effect",
+               if (length(values) != 1) "s", " included for origin '", x$origin,
+               "' (value", if (length(values) != 1) "s", " ",
+               paste(values, collapse = ", "), ")\n"))
+  }
+  expanded
+}
 
 # checkCovariate
 # checks that `name` is a covariate of the state with the nodesets
@@ -113,6 +155,16 @@ checkEffectNodeSets <- function(effectName, args, state) {
       stop(paste0("Effect ", effectName, ": '", origin, "' is not an origin of the state."))
     }
     originSet <- state[[origin]]$nodeSet[1]
+  }
+  if (effectName == "origin_to_node_covar") {
+    if (is.null(state[[origin]]$dummy)) {
+      stop(paste0("Effect ", effectName, ": the origin '", origin, "' has no dummies; ",
+                  "create it with addDummies = TRUE."))
+    }
+    if (!(as.character(args$dummy.value) %in% colnames(state[[origin]]$dummy))) {
+      stop(paste0("Effect ", effectName, ": dummy.value must be a value of the origin '", origin,
+                  "' that has a dummy. Input that caused the error: '", args$dummy.value, "'"))
+    }
   }
   if (effectName %in% sameNodeSetEffects && !identical(originSet, destinations)) {
     stop(paste0("Effect ", effectName, " needs an origin with the nodeset of the destinations (",

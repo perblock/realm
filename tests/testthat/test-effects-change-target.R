@@ -16,6 +16,9 @@ effect_specs <- list(
   dyadic_covariate_resource_attribute = list(attribute.index = "sameRegion",
                                              resource.attribute.index = "sex"),
   resource_covar_to_node_covar = list(resource.attribute.index = "sex", attribute.index = "region"),
+  origin_to_node_covar = list(attribute.index = "size", dummy.value = 2),
+  origin_to_node_covar_17 = list(.effect = "origin_to_node_covar", attribute.index = "region",
+                                 dummy.value = 17),
   same_covariate = list(attribute.index = "region"),
   sim_covariate = list(attribute.index = "size"),
 

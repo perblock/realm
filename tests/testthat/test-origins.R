@@ -276,3 +276,65 @@ test_that("loops_additional_origin is deprecated and equals loops with a second 
     }
   }
 })
+
+test_that("origins have a dummy for each value larger than 1 in the data", {
+  orig <- createOrigin(c(3, 1, 5, 3, 2), nodeSet = c("locations", "people"))
+  expect_equal(colnames(orig$dummy), c("2", "3", "5"))
+  expect_equal(unname(orig$dummy[, "3"]), c(1L, 0L, 0L, 1L, 0L))
+  expect_equal(rowSums(orig$dummy), c(1, 0, 1, 1, 1))
+  expect_null(createOrigin(c(3, 1), nodeSet = c("locations", "people"), addDummies = FALSE)$dummy)
+  expect_equal(ncol(createOrigin(c(1, 1), nodeSet = c("locations", "people"))$dummy), 0)
+})
+
+test_that("origin_to_node_covar gives one effect for each dummy", {
+  expect_output(
+    effects <- createEffects(twoOrigins) |>
+      addEffect(loops, origin = "origin") |>
+      addEffect(origin_to_node_covar, origin = "originRegion", node.attribute = "size"),
+    "origin_to_node_covar: 1 dummy effect included for origin 'originRegion' \\(value 2\\)"
+  )
+  expect_equal(effects$name, c("loops origin", "origin_to_node_covar originRegion 2 to size"))
+  expect_output(
+    effects <- createEffects(myState) |>
+      addEffect(origin_to_node_covar, origin = "origin", node.attribute = "size"),
+    "origin_to_node_covar: 16 dummy effects included for origin 'origin' \\(values 2, 3,"
+  )
+  expect_length(effects$effectFormulas, 16)
+  expect_length(unique(effects$name), 16)
+  expect_equal(effects$name[1], "origin_to_node_covar origin 2 to size")
+  # together with value 1, the statistics add up to those of alter_covariate
+  dv <- myState$dep.var
+  all <- createEffects(myState) |> addEffect(alter_covariate, node.attribute = "size")
+  reference <- sum(myState$cache[[dv]]$origin$valuedNetwork[1, ] * myState$size$data)
+  expect_equal(sum(getNetworkStatistics(dv, myState, myState$cache, effects)) + reference,
+               unname(getNetworkStatistics(dv, myState, myState$cache, all)))
+})
+
+test_that("origin_to_node_covar works for an origin of another nodeset", {
+  effects <- createEffects(twoOrigins) |>
+    addEffect(loops, origin = "origin") |>
+    addEffect(origin_to_node_covar, origin = "originRegion", node.attribute = "size",
+              dummy.value = 2)
+  expect_cpp_matches_r(effects, state = twoOrigins)
+  compare_chains(effects, c(1, 0.05), n = 3000, state = twoOrigins)
+  compare_chains(effects, c(1, 0.05), n = 300, state = twoOrigins, multinomial = TRUE)
+})
+
+test_that("origin_to_node_covar needs the dummies of the origin", {
+  expect_error(createEffects(myState) |>
+                 addEffect(origin_to_node_covar, origin = "origin", node.attribute = "size",
+                           dummy.value = 99),
+               "dummy.value must be a value of the origin 'origin'")
+  noDummies <- myState
+  noDummies$origin$dummy <- NULL
+  assign("noDummies", noDummies, envir = globalenv())
+  on.exit(rm("noDummies", envir = globalenv()), add = TRUE)
+  expect_error(createEffects(noDummies) |>
+                 addEffect(origin_to_node_covar, origin = "origin", node.attribute = "size"),
+               "create it with addDummies = TRUE")
+  expect_error(createEffectsObject(list(list("origin_to_node_covar", origin = "origin",
+                                             attribute.index = "size"))),
+               "needs a process state or a dummy.value")
+  expect_error(createEffects(myState) |> addEffect(origin_to_node_covar, node.attribute = "size"),
+               "specify the origin")
+})

@@ -57,3 +57,12 @@
   variable given as a dyadic covariate passed the checks and the C++ sampler
   read outside its data. The C++ effects also check the size of their
   covariates, and the elements of a process state must have unique names.
+- `createOrigin()`/`realmOrigin()` have the argument `addDummies` (default
+  `TRUE`), which adds the element `dummy` with a dummy for each origin value
+  larger than 1 in the data.
+- New effect `origin_to_node_covar`: do people from a category of an origin
+  move to locations with high values of a covariate of the destinations?
+  `addEffect(origin_to_node_covar, origin = "or_educat", node.attribute =
+  "occ_covar")` adds one effect per dummy of the origin (value 1 is the
+  reference), named e.g. `origin_to_node_covar or_educat 2 to occ_covar`, and
+  reports the number of effects.

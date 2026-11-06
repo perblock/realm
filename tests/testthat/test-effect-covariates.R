@@ -30,6 +30,7 @@ correctArgs <- function(effect) {
   if ("resource.attribute.index" %in% formalNames) {
     args$resource.attribute.index <- if (grepl("_cont|additional_origin", effect)) "second_or" else "sex"
   }
+  if ("dummy.value" %in% formalNames) args$dummy.value <- 2
   args
 }
 wrongInputs <- list(

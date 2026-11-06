@@ -270,6 +270,10 @@ realmDependent <- createDependent
 #' nodes denote the locations (origins)
 #' @param edges Alternative way to specify the nodeSet by naming nodes and edges: 
 #' edges denote the individuals
+#' @param addDummies Add a dummy for each origin value larger than 1 that occurs
+#' in the data, as the element `dummy`: a matrix with one row per
+#' person/resource and one column per value, named by the value. Value 1 is the
+#' reference. The dummies are used by the effect [origin_to_node_covar()].
 #' 
 #' @return An object of class "origin.realm".
 #' @export
@@ -280,11 +284,19 @@ realmDependent <- createDependent
 #' # the origins of the example data
 #' origin <- createOrigin(mobilityEdgelist[, 1], c("organisations", "people"))
 createOrigin <-
-  function(orig, nodeSet = NULL, nodes = NULL, edges = NULL) {
+  function(orig, nodeSet = NULL, nodes = NULL, edges = NULL, addDummies = TRUE) {
     if (!is.null(dim(orig)) && ncol(orig) != 1) {
       stop("An origin is a vector with one location per person/resource.")
     }
-    locationVector(orig, nodeSet, nodes, edges, "origin.realm")
+    l <- locationVector(orig, nodeSet, nodes, edges, "origin.realm")
+    if (addDummies) {
+      values <- sort(unique(l$data[l$data > 1]))
+      resources <- which(l$data > 1)
+      dummy <- matrix(0L, l$size, length(values), dimnames = list(NULL, as.character(values)))
+      dummy[cbind(resources, match(l$data[resources], values))] <- 1L
+      l$dummy <- dummy
+    }
+    l
   }
 
 #' realmOrigin
@@ -360,9 +372,15 @@ locationVector <- function(x, nodeSet, nodes, edges, class) {
 #' )
 createEffectsObject <-
   function(effectInit, checkProcessState = NULL) {
+    # one effect for each dummy of an origin
+    effectInit <- expandOriginDummies(effectInit, checkProcessState)
+
     # TODO add default parameters to effect names
     effectNames <-
       lapply(effectInit, function(x) {
+        if (is.list(x) && identical(x[[1]], "origin_to_node_covar")) {
+          return(paste(x[[1]], x$origin, x$dummy.value, "to", x$attribute.index))
+        }
         ifelse(is.list(x), do.call(paste, x), x)
       })
 

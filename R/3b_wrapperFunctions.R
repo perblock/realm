@@ -84,9 +84,12 @@ addEffect <- function(effectsObject, effectName, ...){
                      list( effectInit = list(effect_arg) , 
                            checkProcessState = eval(parse(text = eff.state)) ))
   
-  effectsObject$effectFormulas[[(nEffects.prev + 1)]] <- new.eff$effectFormulas[[1]]
-  if(new.eff$name[1] %in% effectsObject$name) stop(paste("Effect", new.eff$name[1], "already included in the effects object"))
-  effectsObject$name[(nEffects.prev + 1)] <- new.eff$name[1]
+  # one effect, or several for effects with one effect per dummy of an origin
+  for (k in seq_along(new.eff$effectFormulas)) {
+    if(new.eff$name[k] %in% effectsObject$name) stop(paste("Effect", new.eff$name[k], "already included in the effects object"))
+    effectsObject$effectFormulas[[(nEffects.prev + k)]] <- new.eff$effectFormulas[[k]]
+    effectsObject$name[(nEffects.prev + k)] <- new.eff$name[k]
+  }
   effectsObject
 }
 

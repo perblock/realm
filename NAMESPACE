@@ -28,7 +28,7 @@ export(
   # effect functions: exogenous
   alter_covariate, dyadic_covariate,
   dyadic_covariate_resource_attribute,
-  resource_covar_to_node_covar, 
+  resource_covar_to_node_covar, origin_to_node_covar,
   same_covariate, sim_covariate,
   
   # effect functions: loops

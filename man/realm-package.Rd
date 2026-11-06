@@ -4,9 +4,9 @@
 \name{realm-package}
 \alias{realm}
 \alias{realm-package}
-\title{realm: Relational Analysis of Mobility}
+\title{realm: Relational Alignment Models}
 \description{
-Statistical models for the analysis of weighted mobility networks and distribution networks. Based on the 'MoNAn' package.
+Statistical models for the analysis of relational alignment systems. Based on the 'MoNAn' package.
 }
 \seealso{
 Useful links:

@@ -5,9 +5,21 @@
 \alias{realmOrigin}
 \title{createOrigin}
 \usage{
-createOrigin(orig, nodeSet = NULL, nodes = NULL, edges = NULL)
+createOrigin(
+  orig,
+  nodeSet = NULL,
+  nodes = NULL,
+  edges = NULL,
+  addDummies = TRUE
+)
 
-realmOrigin(orig, nodeSet = NULL, nodes = NULL, edges = NULL)
+realmOrigin(
+  orig,
+  nodeSet = NULL,
+  nodes = NULL,
+  edges = NULL,
+  addDummies = TRUE
+)
 }
 \arguments{
 \item{orig}{A vector with the origin of each person/resource, numbered
@@ -22,6 +34,11 @@ nodes denote the locations (origins)}
 
 \item{edges}{Alternative way to specify the nodeSet by naming nodes and edges:
 edges denote the individuals}
+
+\item{addDummies}{Add a dummy for each origin value larger than 1 that occurs
+in the data, as the element \code{dummy}: a matrix with one row per
+person/resource and one column per value, named by the value. Value 1 is the
+reference. The dummies are used by the effect \code{\link[=origin_to_node_covar]{origin_to_node_covar()}}.}
 }
 \value{
 An object of class "origin.realm".

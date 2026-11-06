@@ -120,6 +120,8 @@ Rules:
   `origin.attribute.index` (`origin.attribute` in `addEffect()`; see
   `same_covariate` and `originAttributeEffects`). Further parameters (such as
   `alpha`) get defaults.
+- **Effects with one effect per category** of an origin: see
+  `origin_to_node_covar` and `expandOriginDummies()` in `R/2_effectFunctions.R`.
 - **Don't check the input data in the function.** Effects are called millions of
   times. Checks that a covariate is symmetric, binary, etc. go into
   `effectInputChecks` in `R/2_effectFunctions.R`, which runs once when the effect

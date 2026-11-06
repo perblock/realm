@@ -184,6 +184,58 @@ resource_covar_to_node_covar <-
   }
 
 
+#' origin_to_node_covar
+#' 
+#' Do people from a category of an origin move particularly to locations with
+#' high values of a covariate? E.g., do people of a certain education group move
+#' particularly to large organisations?
+#' 
+#' Added with [addEffect()] without dummy.value, this gives one effect for each
+#' dummy of the origin (see [createOrigin()]), i.e. for each origin value
+#' larger than 1; value 1 is the reference. A message reports the number of
+#' effects. With dummy.value, only the effect of that value is added.
+#'
+#' @param dep.var 
+#' @param origin The name of the origin (see [createOrigin()]) of the
+#' resources.
+#' @param attribute.index The covariate of the destinations (node.attribute in
+#' [addEffect()]).
+#' @param dummy.value The origin value of the effect.
+#' @param state 
+#' @param cache 
+#' @param i 
+#' @param j 
+#' @param edge 
+#' @param update 
+#' @param getTargetContribution 
+#'
+#' @return Returns the change statistic or target statistic of the effect for 
+#' internal use by the estimation algorithm.
+#' @keywords internal
+origin_to_node_covar <-
+  function(dep.var = 1,
+           origin,
+           attribute.index,
+           dummy.value,
+           state,
+           cache,
+           i,
+           j,
+           edge,
+           update,
+           getTargetContribution = FALSE) {
+    if (i != dummy.value) {
+      return(0)
+    }
+    
+    if (getTargetContribution) {
+      return(cache[[dep.var]][[origin]]$valuedNetwork[i, j] * state[[attribute.index]]$data[j])
+    }
+    
+    return(update * state[[attribute.index]]$data[j])
+  }
+
+
 #' same_covariate
 #' 
 #' Is mobility more likely between locations that are identical on some attribute v? 

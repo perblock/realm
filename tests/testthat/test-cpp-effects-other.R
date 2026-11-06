@@ -72,6 +72,15 @@ test_that("loops count unless exclude.loops = TRUE", {
                loops)
 })
 
+test_that("C++ origin_to_node_covar gives the same values and chains as R", {
+  effects <- createEffects(cppTestState) |>
+    addEffect(origin_to_node_covar, origin = "origin", node.attribute = "size", dummy.value = 3) |>
+    addEffect(origin_to_node_covar, origin = "origin", node.attribute = "region", dummy.value = 9)
+  expect_cpp_matches_r(effects, state = cppTestState)
+  compare_chains(effects, c(0.05, 0.4), n = 5000, state = cppTestState)
+  compare_chains(effects, c(0.05, 0.4), n = 500, state = cppTestState, multinomial = TRUE)
+})
+
 test_that("all exported effects have a C++ version", {
   ns <- asNamespace("realm")
   isEffect <- vapply(getNamespaceExports(ns), function(name) {
