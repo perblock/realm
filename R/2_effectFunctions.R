@@ -57,6 +57,27 @@ sameNodeSetEffects <- c(
   "in_ties_loops", "crowding_out_prop_covar_bin", "staying_by_prop_bin_inflow"
 )
 
+# effects whose statistic is a sum over the resources of a value that depends
+# only on the resource and its destination, so resources are independent of
+# each other given the data. All other effects, also those written by users,
+# are endogenous: their starting values are zero (see getStartingValues), and
+# a model of only exogenous effects is a multinomial logit, for which the MPLE
+# is the maximum likelihood estimate. test-starting-values.R checks this table.
+exogenousEffects <- c(
+  "alter_covariate", "dyadic_covariate", "dyadic_covariate_resource_attribute",
+  "loops", "loops_node_covar", "loops_resource_covar",
+  "loops_resource_covar_node_covar", "loops_x_loops_additional_origin",
+  "loops_additional_origin", "origin_to_node_covar",
+  "resource_covar_to_node_covar", "same_covariate", "sim_covariate"
+)
+
+# isEndogenousEffect
+# For each effect of an effects object; the name of an effect starts with the
+# name of its function
+isEndogenousEffect <- function(effects) {
+  !(sub(" .*", "", effects$name) %in% exogenousEffects)
+}
+
 # effects that compare a covariate of the origin's locations
 # (origin.attribute.index) with one of the destinations (attribute.index); for
 # an origin of another nodeset than the destinations, the origin's covariate

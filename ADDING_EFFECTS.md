@@ -314,6 +314,8 @@ The test "all exported effects have a C++ version" in
 
 - [ ] R function in `R/2*_effectFunctions*.R`; data checks in `effectInputChecks`
 - [ ] roxygen documentation; name in `NAMESPACE`; `devtools::document()`
+- [ ] if the statistic adds up over the resources: name in `exogenousEffects`
+  (`R/2_effectFunctions.R`), otherwise the effect counts as endogenous
 - [ ] entry in `effect_specs` (`tests/testthat/test-effects-change-target.R`)
 - [ ] C++ class and `makeEffect()` entry in `src/effects.cpp`; name in `cppEffects`
 - [ ] C++ tests with `expect_cpp_matches_r()` and `compare_chains()`

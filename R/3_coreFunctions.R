@@ -969,20 +969,45 @@ createWeightedCache <-
 #' the outcome (the destinations), the origins, the nodesets, and covariates.
 #' @param effects An object of class "effectsList.realm" that specifies the model.
 #' @param algorithm An object of class "algorithm.realm" which specifies the algorithm used in the estimation.
-#' @param initialParameters Starting values for the parameters. If neither
-#' initialParameters nor prevAns are specified, maximum pseudo-likelihood
-#' estimates are used, i.e., the estimates of the multinomial logit model for
-#' which [getMultinomialStatistics()] provides the data. If these do not exist
-#' (e.g., because of separation), the estimation starts from zero. For their
+#' @param initialParameters Starting values for the parameters, used as given.
+#' If NULL (the default), `startingValues` determines them.
+#' @param prevAns If a previous estimation did not yield satisfactory convergence,
+#' the outcome object of that estimation should be specified here to provide new
+#' starting values for the estimation.
+#' @param startingValues How the starting values are determined if neither
+#' initialParameters nor prevAns are specified.
+#' "partial MPLE" (the default) sets endogenous effects to zero and takes the
+#' other effects from the maximum pseudo-likelihood estimates (MPLE) of the
+#' model without endogenous effects. "full MPLE" uses the MPLE of all effects,
+#' which are often too large for endogenous effects. "zero" starts with all
+#' parameters at zero.
+#'
+#' The exogenous effects are those whose statistics add up over the resources,
+#' i.e., where the value of a resource depends on its own destination only:
+#' `alter_covariate`, `dyadic_covariate`, `dyadic_covariate_resource_attribute`,
+#' `loops`, `loops_node_covar`, `loops_resource_covar`,
+#' `loops_resource_covar_node_covar`, `loops_x_loops_additional_origin`,
+#' `loops_additional_origin`, `origin_to_node_covar`,
+#' `resource_covar_to_node_covar`, `same_covariate` and `sim_covariate`, which
+#' includes fixed effects and origin dummies. All other effects are endogenous,
+#' also effects written by users.
+#'
+#' If all effects are exogenous, the model is a multinomial logit model, so the
+#' MPLE is the maximum likelihood estimate and needs no simulation. With
+#' "partial MPLE" it is then returned directly, with standard errors from the
+#' Hessian of the pseudo-likelihood, and phases 1 to 3 are skipped. Only with
+#' `returnDeps = TRUE`, phase 3 simulates networks at these estimates. "full
+#' MPLE" and "zero" run the simulation-based estimation also for these models.
+#'
+#' The MPLE are the estimates of the multinomial logit model for which
+#' [getMultinomialStatistics()] provides the data. If they do not exist (e.g.,
+#' because of separation), the estimation starts from zero. For their
 #' calculation, the change statistics of all possible destinations are stored,
 #' once for each group of resources with the same origin, destination and
 #' values of the resource covariates used by the effects. If this needs more
 #' than `getOption("realm.mpleMemoryLimit")` bytes (default 1e9, i.e., 1 GB),
 #' they are recalculated in each step instead, which is slower but needs little
 #' memory.
-#' @param prevAns If a previous estimation did not yield satisfactory convergence,
-#' the outcome object of that estimation should be specified here to provide new
-#' starting values for the estimation.
 #' @param parallel Logical: computation on multiple cores? If TRUE, the
 #' simulations run in `cpus` independent chains on a socket cluster (package
 #' 'parallel'). Each chain gets its own random number stream derived from the
@@ -1005,6 +1030,10 @@ createWeightedCache <-
 #' In case returnDeps = TRUE, the simulations of Phase 3 are included, too,
 #' together with the statistics of the model's effects in the observed and the
 #' simulated networks (used by [scoreTest()]).
+#' If the MPLE is returned directly (see `startingValues`), the covariance
+#' matrix is the negative inverse of the Hessian of the pseudo-likelihood, and
+#' the convergence statistics are calculated exactly (they are simulated with
+#' returnDeps = TRUE).
 #' @export
 #'
 #' @seealso [createProcessState()], [createEffectsObject()], [createAlgorithm()]
@@ -1038,6 +1067,7 @@ estimateMobilityNetwork <-
            algorithm,
            initialParameters = NULL,
            prevAns = NULL,
+           startingValues = c("partial MPLE", "full MPLE", "zero"),
            parallel = FALSE,
            cpus = 1,
            verbose = FALSE,
@@ -1046,6 +1076,7 @@ estimateMobilityNetwork <-
            saveAlg = TRUE,
            cache = NULL) {
     
+    startingValues <- match.arg(startingValues)
     if(!is.null(cache)){
       warning(paste("The cache object is automatically included in the process state", 
               "since MoNAn version 1.0.0 and does not need to be specified anymore."))
@@ -1075,11 +1106,6 @@ estimateMobilityNetwork <-
     burnInN3 <- algorithm$burnInN3
     thinningN3 <- algorithm$thinningN3
 
-    # set parameters to default values if not defined explicitly
-    if (is.null(initialParameters)) {
-      initialParameters <- rep(0, length(effects$name))
-    }
-
     observedStatistics <-
       getNetworkStatistics(dep.var, state, cache, effects)
 
@@ -1093,18 +1119,18 @@ estimateMobilityNetwork <-
       }
     }
 
-    # starting values: if neither prevAns nor initialParameters are given,
-    # use the maximum pseudo-likelihood estimate
+    # starting values: given by prevAns or initialParameters, otherwise
+    # determined by startingValues. A model without endogenous effects is a
+    # multinomial logit: with the default, its MPLE is the estimate.
     useGT <- identical(algorithm$phase2Method, "GT")
-    if (is.null(prevAns) && all(initialParameters == 0)) {
-      if (verbose) {
-        cat("Calculating maximum pseudo-likelihood estimates as starting values\n")
+    mpleFit <- NULL
+    if (is.null(prevAns) && is.null(initialParameters)) {
+      if (startingValues == "partial MPLE" && !any(isEndogenousEffect(effects))) {
+        mpleFit <- getMPLEFit(dep.var, state, cache, effects)
       }
-      mple <- getMPLE(dep.var, state, cache, effects)
-      if (is.null(mple)) {
-        cat("Maximum pseudo-likelihood estimates not available; starting from zero\n")
-      } else {
-        initialParameters <- mple
+      if (is.null(mpleFit)) {
+        initialParameters <- getStartingValues(startingValues, dep.var, state, cache,
+                                               effects, verbose)
       }
     }
 
@@ -1113,6 +1139,22 @@ estimateMobilityNetwork <-
     if (parallel && cpus > 1) {
       cl <- startCluster(cpus)
       on.exit(stopCluster(cl), add = TRUE)
+    }
+
+    if (!is.null(mpleFit)) {
+      cat("All effects are exogenous: returning the maximum pseudo-likelihood estimates\n")
+      resPhase3 <- NULL
+      if (returnDeps) {
+        resPhase3 <- runPhase3(dep.var, state, cache, effects, mpleFit$estimates,
+                               observedStatistics, iterationsN3, burnInN3, thinningN3,
+                               cl = cl, verbose = verbose, returnDeps = TRUE,
+                               multinomialProposal, fish = fish)
+      }
+      result <- mpleResult(mpleFit, state, cache, resPhase3, observedStatistics)
+      if (saveAlg) {
+        result[["algorithm"]] <- algorithm
+      }
+      return(result)
     }
 
     # decide whether to run phase 1: it is skipped with prevAns, and with

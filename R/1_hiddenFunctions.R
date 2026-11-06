@@ -733,8 +733,16 @@ geyerThompsonStep <- function(statistics, observedStatistics, minESS = 0.5,
 # estimation. Returns NULL if the estimate does not exist (e.g. separation) or
 # the optimisation fails. The pseudo-likelihood is calculated in C++ if all
 # effects have a C++ version (mpleObjectiveCpp), otherwise in R.
-getMPLE <- function(dep.var, state, cache, effects,
-                    maxNewton = 50, tol = 1e-8) {
+getMPLE <- function(dep.var, state, cache, effects, ...) {
+  getMPLEFit(dep.var, state, cache, effects, ...)$estimates
+}
+
+
+# getMPLEFit
+# The estimate of getMPLE with the gradient and Hessian of the log
+# pseudo-likelihood at the estimate; NULL if the estimate does not exist.
+getMPLEFit <- function(dep.var, state, cache, effects,
+                       maxNewton = 50, tol = 1e-8) {
   p <- length(effects$effectFormulas)
   evaluate <- if (useCppSampler(effects, state)) {
     mpleObjectiveCpp(dep.var, state, cache, effects)
@@ -770,7 +778,75 @@ getMPLE <- function(dep.var, state, cache, effects,
     return(NULL)
   }
   names(theta) <- effects$name
-  theta
+  final <- evaluate(theta, derivatives = TRUE)
+  list(estimates = theta, gradient = final$gradient, hessian = final$hessian)
+}
+
+
+# getStartingValues
+# The starting values of the estimation (see the argument startingValues of
+# estimateMobilityNetwork):
+# "zero": all zero;
+# "full MPLE": the MPLE of all effects;
+# "partial MPLE": endogenous effects zero, the other effects from the MPLE of
+# the model without endogenous effects. The MPLE of a full model is too large
+# for endogenous effects, and the other effects only fit together with these.
+# Starts from zero if the MPLE does not exist.
+getStartingValues <- function(method, dep.var, state, cache, effects, verbose = FALSE) {
+  values <- setNames(rep(0, length(effects$name)), effects$name)
+  fitted <- if (method == "partial MPLE") !isEndogenousEffect(effects) else
+    rep(method == "full MPLE", length(values))
+  if (!any(fitted)) {
+    return(values)
+  }
+  if (verbose) {
+    cat("Calculating maximum pseudo-likelihood estimates as starting values\n")
+  }
+  mple <- getMPLE(dep.var, state, cache, subsetEffects(effects, fitted))
+  if (is.null(mple)) {
+    cat("Maximum pseudo-likelihood estimates not available; starting from zero\n")
+    return(values)
+  }
+  values[fitted] <- mple
+  values
+}
+
+
+# mpleResult
+# The result of an estimation that returns the MPLE (getMPLEFit) of a model
+# without endogenous effects. The variance of the statistics is the negative
+# Hessian. resPhase3 are the results of phase 3 at the MPLE, if networks are
+# simulated.
+mpleResult <- function(fit, state, cache, resPhase3 = NULL, observedStatistics = NULL) {
+  information <- -fit$hessian
+  covarianceMatrix <- solve(information)
+  dimnames(covarianceMatrix) <- NULL
+  result <- list(
+    estimates = fit$estimates,
+    standardErrors = sqrt(diag(covarianceMatrix)),
+    covarianceMatrix = covarianceMatrix,
+    convergenceStatistics = -fit$gradient / sqrt(diag(information)),
+    state = state,
+    cache = cache
+  )
+  if (!is.null(resPhase3)) {
+    result$convergenceStatistics <- resPhase3$convergenceStatistics
+    result$deps <- resPhase3$deps
+    # as in estimateMobilityNetwork, for scoreTest
+    result$observedStatistics <- observedStatistics
+    result$simulatedStatistics <- `rownames<-`(resPhase3$statistics, NULL)
+  }
+  class(result) <- "result.realm"
+  result
+}
+
+
+# subsetEffects
+# An effects object with some of the effects (a logical vector)
+subsetEffects <- function(effects, keep) {
+  effects$effectFormulas <- effects$effectFormulas[keep]
+  effects$name <- effects$name[keep]
+  effects
 }
 
 # mpleObjectiveR

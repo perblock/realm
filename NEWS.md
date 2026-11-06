@@ -75,3 +75,12 @@
   (`dummy2`, `dummy3`, ...), not every covariate with "dummy" in its name.
 - Printing an effects object shows the origin of each effect in a column of
   its own, and the dummy of `origin_to_node_covar` under parameter (`d 2`).
+- `estimateMobilityNetwork()`/`realmEstimate()` have the argument
+  `startingValues`: `"partial MPLE"` (the new default) sets endogenous effects
+  to zero and takes the others from the MPLE of the model without them,
+  `"full MPLE"` is the previous default and `"zero"` starts from zero.
+  `initialParameters` are used as given: an all-zero vector no longer means
+  MPLE. With the default, a model of only exogenous effects is a multinomial
+  logit, so its MPLE is returned directly with standard errors from the
+  Hessian, without phases 1 to 3; with `returnDeps = TRUE`, phase 3 simulates
+  networks at these estimates.

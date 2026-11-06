@@ -13,6 +13,7 @@ estimateMobilityNetwork(
   algorithm,
   initialParameters = NULL,
   prevAns = NULL,
+  startingValues = c("partial MPLE", "full MPLE", "zero"),
   parallel = FALSE,
   cpus = 1,
   verbose = FALSE,
@@ -28,6 +29,7 @@ estimateDistributionNetwork(
   algorithm,
   initialParameters = NULL,
   prevAns = NULL,
+  startingValues = c("partial MPLE", "full MPLE", "zero"),
   parallel = FALSE,
   cpus = 1,
   verbose = FALSE,
@@ -43,6 +45,7 @@ realmEstimate(
   algorithm,
   initialParameters = NULL,
   prevAns = NULL,
+  startingValues = c("partial MPLE", "full MPLE", "zero"),
   parallel = FALSE,
   cpus = 1,
   verbose = FALSE,
@@ -62,21 +65,47 @@ the outcome (the destinations), the origins, the nodesets, and covariates.}
 
 \item{algorithm}{An object of class "algorithm.realm" which specifies the algorithm used in the estimation.}
 
-\item{initialParameters}{Starting values for the parameters. If neither
-initialParameters nor prevAns are specified, maximum pseudo-likelihood
-estimates are used, i.e., the estimates of the multinomial logit model for
-which \code{\link[=getMultinomialStatistics]{getMultinomialStatistics()}} provides the data. If these do not exist
-(e.g., because of separation), the estimation starts from zero. For their
+\item{initialParameters}{Starting values for the parameters, used as given.
+If NULL (the default), \code{startingValues} determines them.}
+
+\item{prevAns}{If a previous estimation did not yield satisfactory convergence,
+the outcome object of that estimation should be specified here to provide new
+starting values for the estimation.}
+
+\item{startingValues}{How the starting values are determined if neither
+initialParameters nor prevAns are specified.
+"partial MPLE" (the default) sets endogenous effects to zero and takes the
+other effects from the maximum pseudo-likelihood estimates (MPLE) of the
+model without endogenous effects. "full MPLE" uses the MPLE of all effects,
+which are often too large for endogenous effects. "zero" starts with all
+parameters at zero.
+
+The exogenous effects are those whose statistics add up over the resources,
+i.e., where the value of a resource depends on its own destination only:
+\code{alter_covariate}, \code{dyadic_covariate}, \code{dyadic_covariate_resource_attribute},
+\code{loops}, \code{loops_node_covar}, \code{loops_resource_covar},
+\code{loops_resource_covar_node_covar}, \code{loops_x_loops_additional_origin},
+\code{loops_additional_origin}, \code{origin_to_node_covar},
+\code{resource_covar_to_node_covar}, \code{same_covariate} and \code{sim_covariate}, which
+includes fixed effects and origin dummies. All other effects are endogenous,
+also effects written by users.
+
+If all effects are exogenous, the model is a multinomial logit model, so the
+MPLE is the maximum likelihood estimate and needs no simulation. With
+"partial MPLE" it is then returned directly, with standard errors from the
+Hessian of the pseudo-likelihood, and phases 1 to 3 are skipped. Only with
+\code{returnDeps = TRUE}, phase 3 simulates networks at these estimates. "full
+MPLE" and "zero" run the simulation-based estimation also for these models.
+
+The MPLE are the estimates of the multinomial logit model for which
+\code{\link[=getMultinomialStatistics]{getMultinomialStatistics()}} provides the data. If they do not exist (e.g.,
+because of separation), the estimation starts from zero. For their
 calculation, the change statistics of all possible destinations are stored,
 once for each group of resources with the same origin, destination and
 values of the resource covariates used by the effects. If this needs more
 than \code{getOption("realm.mpleMemoryLimit")} bytes (default 1e9, i.e., 1 GB),
 they are recalculated in each step instead, which is slower but needs little
 memory.}
-
-\item{prevAns}{If a previous estimation did not yield satisfactory convergence,
-the outcome object of that estimation should be specified here to provide new
-starting values for the estimation.}
 
 \item{parallel}{Logical: computation on multiple cores? If TRUE, the
 simulations run in \code{cpus} independent chains on a socket cluster (package
@@ -113,6 +142,10 @@ the standard errors is included, which also shows collinearity between effects.
 In case returnDeps = TRUE, the simulations of Phase 3 are included, too,
 together with the statistics of the model's effects in the observed and the
 simulated networks (used by \code{\link[=scoreTest]{scoreTest()}}).
+If the MPLE is returned directly (see \code{startingValues}), the covariance
+matrix is the negative inverse of the Hessian of the pseudo-likelihood, and
+the convergence statistics are calculated exactly (they are simulated with
+returnDeps = TRUE).
 
 The function \code{print.result.realm} prints the results from a realm
 estimation with three columns indicating the estimate, the standard error,
