@@ -201,6 +201,59 @@ getMultinomialStatistics <-
   }
 
 
+#' getPseudoProbabilities
+#' 
+#' A function to calculate, for a fitted model, the probability of the observed
+#' destination of each resource, given the destinations of all other resources.
+#' When the model contains only exogenous effects, resources are independent
+#' and these are the predicted probabilities of the model. With endogenous
+#' effects they are conditional on the observed destinations of the other
+#' resources, and thus differ from the probabilities of networks simulated from
+#' the model; the sum of their logarithms is the log pseudo-likelihood.
+#'
+#' @param ans An object of class "result.realm", the result of an
+#' estimation (see [estimateMobilityNetwork()]).
+#' @param effects The object of class "effectsList.realm" that was used in
+#' the estimation.
+#'
+#' @returns A numeric vector with one probability per resource, in the order of
+#' the resources.
+#' @export
+#'
+#' @examples
+#' getPseudoProbabilities(myResDN, myEffects)
+getPseudoProbabilities <- function(ans, effects){
+  if (!inherits(ans, "result.realm")) {
+    stop(paste0("getPseudoProbabilities: ans must be the result of an estimation. ",
+                "Input that caused the error: an object of class '",
+                class(ans)[1], "'"))
+  }
+  effectNames <- as.character(effects$name)
+  fitNames <- names(ans$estimates)
+  if (!identical(effectNames, fitNames)) {
+    input <- if (length(effectNames) != length(fitNames)) {
+      paste("number of effects:", length(effectNames), "instead of", length(fitNames))
+    } else {
+      effectNames[effectNames != fitNames][1]
+    }
+    stop(paste0("getPseudoProbabilities: effects must contain the effects of the ",
+                "fitted model, in the same order. Input that caused the error: '",
+                input, "'"))
+  }
+  
+  # calculate conditional logit statistics
+  MN_statistics <- getMultinomialStatistics(ans$state, effects)
+  
+  # transform to utilities / objective function values
+  utility <- as.matrix(MN_statistics[, -(1:3)]) %*% ans$estimates
+  
+  # calculate probabilities
+  choice_probas <- exp(utility[MN_statistics$choice == 1]) / 
+    (tapply(as.vector(utility), MN_statistics$resource, function(x) sum(exp(x))))
+  
+  as.vector(choice_probas)
+}
+
 
 #' gofMobilityNetwork
 #' 

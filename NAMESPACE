@@ -15,7 +15,7 @@ export(
   
   # auxiliary functions
   autoCorrelationTest, extractTraces, 
-  getMultinomialStatistics, 
+  getMultinomialStatistics, getPseudoProbabilities,
   gofDistributionNetwork, gofMobilityNetwork, realmGOF,
   plot.gof.stats.realm, 
   plot.traces.realm, print.result.realm, print.scoretest.realm, scoreTest,

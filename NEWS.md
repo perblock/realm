@@ -78,6 +78,9 @@
 - Printing an effects object or a state leaves out the fixed effects and the
   location dummies and gives their number in one line;
   `print(x, showDummies = TRUE)` shows them.
+- New function `getPseudoProbabilities()`: the probability of the observed
+  destination of each resource under a fitted model, given the destinations
+  of the other resources.
 - `estimateMobilityNetwork()`/`realmEstimate()` have the argument
   `startingValues`: `"partial MPLE"` (the new default) sets endogenous effects
   to zero and takes the others from the MPLE of the model without them,
