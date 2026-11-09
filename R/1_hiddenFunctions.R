@@ -924,6 +924,13 @@ runPhase3 <- function(dep.var,
                       returnDeps = FALSE,
                       multinomialProposal = FALSE,
                       fish = fish) {
+  if (verbose) {
+    cat("Starting phase 3:\n")
+    cat(paste(" burn-in", burnInN3, "steps\n", 
+              iterationsN3, " iterations\n thinning", 
+              thinningN3, "\n", if (is.null(cl)) 1 else length(cl), "cpus\n"))
+  }
+
   # simulate statistic matrix
   # with a cluster cl, one chain per worker; the results are combined in the
   # order of the chains

@@ -344,3 +344,27 @@ test_that("returnDeps works in parallel for an exogenous model", {
   expect_length(res$deps, 40)
   expect_equal(unname(res$estimates), exoFit$estimates, tolerance = 1e-6)
 })
+
+test_that("phase 3 prints its settings when verbose, in every route to it", {
+  alg <- quickAlgorithm(myState, exoEffects)
+  started <- function(out) sum(out == "Starting phase 3:")
+
+  out <- capture.output(estimateMobilityNetwork(myState, exoEffects, alg, returnDeps = TRUE,
+                                                verbose = TRUE))
+  expect_equal(started(out), 1)
+  expect_true(any(grepl(paste(" burn-in", alg$burnInN3, "steps"), out, fixed = TRUE)))
+  expect_true(any(grepl(paste(alg$iterationsN3, " iterations"), out, fixed = TRUE)))
+  expect_true(any(grepl(paste(" thinning", alg$thinningN3), out, fixed = TRUE)))
+  expect_true(" 1 cpus" %in% out)
+
+  # the route through phases 1 and 2
+  out <- capture.output(estimateMobilityNetwork(myState, exoEffects, alg, startingValues = "zero",
+                                                verbose = TRUE))
+  expect_equal(started(out), 1)
+
+  # not without verbose, and not when phase 3 doesn't run
+  out <- capture.output(estimateMobilityNetwork(myState, exoEffects, alg, returnDeps = TRUE))
+  expect_equal(started(out), 0)
+  out <- capture.output(estimateMobilityNetwork(myState, exoEffects, alg, verbose = TRUE))
+  expect_equal(started(out), 0)
+})

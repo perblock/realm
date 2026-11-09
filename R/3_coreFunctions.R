@@ -1233,12 +1233,6 @@ estimateMobilityNetwork <-
     }
 
     # run phase 3 to get final covariance matrix and convergence check
-    if (verbose) {
-      cat("Starting phase 3:\n")
-      cat(paste(" burn-in", burnInN3, "steps\n", 
-                iterationsN3, " iterations\n thinning", 
-                thinningN3, "\n", cpus, "cpus\n"))
-    }
     resPhase3 <- runPhase3(
       dep.var,
       state,
