@@ -383,9 +383,27 @@ plot.traces.realm <- function(x, ...) {
 }
 
 
+# isDummyName
+# whether names are those of the location dummies of realmDataCreate()
+isDummyName <- function(x) {
+  grepl("^dummy[0-9]+$", x)
+}
+
+# printDummiesNotShown
+# the line that says how many dummies a print method left out
+printDummiesNotShown <- function(n, what) {
+  cat(n, " ", what, if (n == 1) " is" else "s are",
+      " included but not shown. Use print(x, showDummies = TRUE) to show them.\n",
+      sep = "")
+}
+
+
 #' print.effectsList.realm
 #'
 #' @param x An object of class "effectsList.realm".
+#' @param showDummies Whether to show the fixed effects, i.e. the
+#' [alter_covariate] effects of the location dummies (see [addFixedEffects()]).
+#' By default they are left out, and a line gives their number.
 #' @param ... For internal use only.
 #'
 #' @return The function `print.effectsList.realm` gives an overview of the 
@@ -394,14 +412,17 @@ plot.traces.realm <- function(x, ...) {
 #'
 #' @examples
 #' myEffects
-print.effectsList.realm <- function(x, ...) {
+print.effectsList.realm <- function(x, showDummies = FALSE, ...) {
+  
+  hidden <- !showDummies & grepl("^alter_covariate dummy[0-9]+$", x$name)
+  shown <- which(!hidden)
   
   df <- as.data.frame(matrix(nrow = 0, ncol = 5))
   colnames(df) <- c("name", "origin", paste0("covariate_", x$nodeset1), paste0("covariate_", x$nodeset2), "parameter")
   
-  if (length(x$name) != 0) { # if the effects object includes effects, fill table
+  if (length(shown) != 0) { # if there are effects to show, fill table
     
-    for (i in 1:length(x[["name"]])) {
+    for (i in shown) {
       
       df[nrow(df) + 1, ]$name <- strsplit(x[["name"]][i], split = " ")[[1]][1]
       
@@ -457,15 +478,23 @@ print.effectsList.realm <- function(x, ...) {
     
   } else {
     cat("Effects\n")
-    cat("The effects object does not contain any effects.\n")
+    if (!any(hidden)) {
+      cat("The effects object does not contain any effects.\n")
+    }
   }
   
+  if (any(hidden)) {
+    printDummiesNotShown(sum(hidden), "fixed effect")
+  }
 }
 
 
 #' print.processState.realm
 #'
 #' @param x An object of class "processState.realm".
+#' @param showDummies Whether to show the location dummies (see the argument
+#' fixedEffectDummies of [realmDataCreate()]) in the table of covariates. By
+#' default they are left out, and a line gives their number.
 #' @param ... For internal use only.
 #'
 #' @return The function `print.processState.realm` gives an overview of the information 
@@ -474,7 +503,7 @@ print.effectsList.realm <- function(x, ...) {
 #'
 #' @examples
 #' myState
-print.processState.realm <- function(x, ...) {
+print.processState.realm <- function(x, showDummies = FALSE, ...) {
   
   dep.var <- x$dep.var
   destinations <- destinationNodeSet(x)
@@ -493,7 +522,7 @@ print.processState.realm <- function(x, ...) {
   # the covariates of each nodeset: destinations, other origin nodesets, resources
   originSets <- unique(vapply(x$origins, function(o) x[[o]]$nodeSet[1], character(1)))
   for (nodeset in unique(c(destinations, originSets, resources))) {
-    printCovariates(x, covars, nodeset)
+    printCovariates(x, covars, nodeset, showDummies)
     if (nodeset != resources) {
       cat("\n")
     }
@@ -502,20 +531,21 @@ print.processState.realm <- function(x, ...) {
 
 # printCovariates
 # prints a table of the covariates of one nodeset (for print.processState.realm)
-printCovariates <- function(x, covars, nodeset) {
+printCovariates <- function(x, covars, nodeset, showDummies) {
+  onNodeset <- vapply(covars, function(covar) nodeset %in% x[[covar]]$nodeSet, logical(1))
+  hidden <- !showDummies & onNodeset & isDummyName(covars)
+
   df1 <- as.data.frame(matrix(nrow = 0, ncol = 3))
   colnames(df1) <- c("cov. name", "range", "mean")
 
   # fill table
-  for (covar in covars) {
-    if (nodeset %in% x[[covar]]$nodeSet) {
-      df1[nrow(df1) + 1, ]$'cov. name' <- covar
-      df1[nrow(df1), ]$range <-
-        paste0(round(min(x[[covar]]$data, na.rm = TRUE), digits = 2), "-",
-               round(max(x[[covar]]$data, na.rm = TRUE), digits = 2))
-      df1[nrow(df1), ]$mean <- round(mean(x[[covar]]$data, na.rm = TRUE),
-                                     digits = 2)
-    }
+  for (covar in covars[onNodeset & !hidden]) {
+    df1[nrow(df1) + 1, ]$'cov. name' <- covar
+    df1[nrow(df1), ]$range <-
+      paste0(round(min(x[[covar]]$data, na.rm = TRUE), digits = 2), "-",
+             round(max(x[[covar]]$data, na.rm = TRUE), digits = 2))
+    df1[nrow(df1), ]$mean <- round(mean(x[[covar]]$data, na.rm = TRUE),
+                                   digits = 2)
   }
 
   cat(paste("covariates of", nodeset), "\n")
@@ -535,8 +565,12 @@ printCovariates <- function(x, covars, nodeset) {
     df1[,2:3] <- format(df1[,2:3], justify = "centre")
     df1[,1] <- format(df1[,1], justify = "left")
     print(df1, row.names = FALSE)
-  } else { # if there are no covariates for the resp. nodeset
+  } else if (!any(hidden)) { # if there are no covariates for the resp. nodeset
     cat("no covariates available for nodeset", nodeset, "\n")
+  }
+
+  if (any(hidden)) {
+    printDummiesNotShown(sum(hidden), "fixed-effect dummy variable")
   }
 }
 

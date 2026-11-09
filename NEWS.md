@@ -75,6 +75,9 @@
   (`dummy2`, `dummy3`, ...), not every covariate with "dummy" in its name.
 - Printing an effects object shows the origin of each effect in a column of
   its own, and the dummy of `origin_to_node_covar` under parameter (`d 2`).
+- Printing an effects object or a state leaves out the fixed effects and the
+  location dummies and gives their number in one line;
+  `print(x, showDummies = TRUE)` shows them.
 - `estimateMobilityNetwork()`/`realmEstimate()` have the argument
   `startingValues`: `"partial MPLE"` (the new default) sets endogenous effects
   to zero and takes the others from the MPLE of the model without them,

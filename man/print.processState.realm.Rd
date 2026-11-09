@@ -4,10 +4,14 @@
 \alias{print.processState.realm}
 \title{print.processState.realm}
 \usage{
-\method{print}{processState.realm}(x, ...)
+\method{print}{processState.realm}(x, showDummies = FALSE, ...)
 }
 \arguments{
 \item{x}{An object of class "processState.realm".}
+
+\item{showDummies}{Whether to show the location dummies (see the argument
+fixedEffectDummies of \code{\link[=realmDataCreate]{realmDataCreate()}}) in the table of covariates. By
+default they are left out, and a line gives their number.}
 
 \item{...}{For internal use only.}
 }

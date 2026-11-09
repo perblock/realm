@@ -4,10 +4,14 @@
 \alias{print.effectsList.realm}
 \title{print.effectsList.realm}
 \usage{
-\method{print}{effectsList.realm}(x, ...)
+\method{print}{effectsList.realm}(x, showDummies = FALSE, ...)
 }
 \arguments{
 \item{x}{An object of class "effectsList.realm".}
+
+\item{showDummies}{Whether to show the fixed effects, i.e. the
+\link{alter_covariate} effects of the location dummies (see \code{\link[=addFixedEffects]{addFixedEffects()}}).
+By default they are left out, and a line gives their number.}
 
 \item{...}{For internal use only.}
 }

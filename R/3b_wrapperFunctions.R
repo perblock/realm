@@ -25,7 +25,7 @@ addDummyEffects <- function(effectsObject, state){
   if(stateName != effectsObject$state){
     stop("in addDummyEffects: this is not the state specified in the effectsObject")
   }
-  dummies_to_include <- names(state)[grep("^dummy[0-9]+$", names(state))]
+  dummies_to_include <- names(state)[isDummyName(names(state))]
   for (i in dummies_to_include){
     effectsObject <- addEffect(effectsObject, 
                                alter_covariate, 
