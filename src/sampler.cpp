@@ -214,6 +214,66 @@ void setupSampler(Sampler& s,
   }
 }
 
+// The resources of resourceSet grouped by their change statistics: resources
+// with the same origins, the same observed destination and the same values of
+// the resource covariates in `keyCovariates` (those used by the model's
+// effects) have the same ones, so one of them represents the group, with the
+// group's size as weight. Resources with missing values are not grouped. A
+// resource whose observed destination is not in nodeSet is in no group: its
+// groupOf is -1 and allPossible is false.
+struct ResourceGroups {
+  std::vector<int> representative;
+  std::vector<double> weight;
+  std::vector<int> groupOf;  // for each element of resourceSet
+  bool allPossible = true;
+};
+
+ResourceGroups groupResources(const Sampler& s,
+                              const Rcpp::IntegerVector& resourceSet,
+                              const Rcpp::IntegerVector& nodeSet,
+                              const Rcpp::CharacterVector& keyCovariates) {
+  std::vector<int> keyIndex;
+  for (R_xlen_t k = 0; k < keyCovariates.size(); ++k) {
+    keyIndex.push_back(s.ch.resourceIndex(Rcpp::as<std::string>(keyCovariates[k])));
+  }
+
+  ResourceGroups groups;
+  std::map<std::vector<double>, size_t> groupOf;
+  for (int r : resourceSet) {
+    int edge = r - 1;
+    int j = s.ch.receiver[edge];
+    bool possible = std::find(nodeSet.begin(), nodeSet.end(), j + 1) != nodeSet.end();
+    if (!possible) {
+      groups.allPossible = false;
+      groups.groupOf.push_back(-1);
+      continue;
+    }
+    std::vector<double> key;
+    for (const OriginNet& net : s.ch.origins) key.push_back((double)net.origin[edge]);
+    key.push_back((double)j);
+    bool missing = false;
+    for (int k : keyIndex) {
+      double value = s.ch.resourceValues[k][edge];
+      if (ISNAN(value)) missing = true;
+      key.push_back(value);
+    }
+    if (!missing) {
+      auto found = groupOf.find(key);
+      if (found != groupOf.end()) {
+        groups.weight[found->second] += 1;
+        groups.groupOf.push_back((int)found->second);
+        continue;
+      }
+      groupOf[key] = groups.representative.size();
+    }
+    // a new group (resources with missing values are not grouped)
+    groups.groupOf.push_back((int)groups.representative.size());
+    groups.representative.push_back(edge);
+    groups.weight.push_back(1);
+  }
+  return groups;
+}
+
 }  // namespace
 
 // Runs one chain: burnIn steps, then `iterations` times (thinning + 1) steps
@@ -392,6 +452,67 @@ Rcpp::List mpleNewtonCpp(Rcpp::IntegerVector destinations,
     Rcpp::Named("hessian") = H);
 }
 
+// Probability of the observed destination of each resource given the
+// destinations of all other resources (see getPseudoProbabilities() in R), for
+// parameters theta: the conditional logit of mpleNewtonCpp, calculated once
+// for each group of resources with the same change statistics. Nothing but the
+// probabilities is stored. NA for resources outside resourceSet and resources
+// whose observed destination is not in nodeSet.
+// [[Rcpp::export]]
+Rcpp::NumericVector pseudoProbabilitiesCpp(Rcpp::IntegerVector destinations,
+                                           Rcpp::List origins,
+                                           Rcpp::List cache,
+                                           Rcpp::List resourceCovariates,
+                                           Rcpp::IntegerVector resourceSet,
+                                           Rcpp::IntegerVector nodeSet,
+                                           Rcpp::List effectSpecs,
+                                           Rcpp::CharacterVector keyCovariates,
+                                           Rcpp::NumericVector theta) {
+  Sampler s;
+  setupSampler(s, destinations, origins, cache, resourceCovariates, effectSpecs);
+  size_t K = s.effects.size();
+  if ((size_t)theta.size() != K) Rcpp::stop("number of parameters and effects differ");
+
+  ResourceGroups groups = groupResources(s, resourceSet, nodeSet, keyCovariates);
+  size_t G = groups.representative.size(), D = nodeSet.size();
+  std::vector<double> probability(G), eta(D);
+
+  for (size_t g = 0; g < G; ++g) {
+    int edge = groups.representative[g];
+    int j = s.ch.receiver[edge];
+    s.setSenders(edge);
+
+    // utility of adding the resource to each destination, after removing it
+    s.ch.getCells(edge, j, s.old);
+    s.ch.update(edge, j, -1);
+    s.ch.receiver[edge] = -1;
+    size_t observed = 0;
+    double maxEta = R_NegInf;
+    for (size_t d = 0; d < D; ++d) {
+      if (nodeSet[d] - 1 == j) observed = d;
+      eta[d] = 0;
+      for (size_t k = 0; k < K; ++k) {
+        eta[d] += s.effects[k]->change(s.ch, s.senders[k], nodeSet[d] - 1, edge, 1) * theta[k];
+      }
+      maxEta = std::max(maxEta, eta[d]);
+    }
+    s.ch.restoreCells(edge, j, s.old);
+    s.ch.receiver[edge] = j;
+
+    // softmax with the maximum subtracted
+    double total = 0;
+    for (size_t d = 0; d < D; ++d) total += std::exp(eta[d] - maxEta);
+    probability[g] = std::exp(eta[observed] - maxEta) / total;
+  }
+
+  Rcpp::NumericVector result(destinations.size(), NA_REAL);
+  for (R_xlen_t i = 0; i < resourceSet.size(); ++i) {
+    int group = groups.groupOf[i];
+    if (group >= 0) result[resourceSet[i] - 1] = probability[group];
+  }
+  return result;
+}
+
 // Choice sets of the conditional logit model of the MPLE (as mpleNewtonCpp),
 // computed once and stored, each distinct choice set only once. Resources with
 // the same origins, the same observed destination and the same values of the
@@ -414,43 +535,12 @@ Rcpp::List mpleChoiceSetsCpp(Rcpp::IntegerVector destinations,
   Sampler s;
   setupSampler(s, destinations, origins, cache, resourceCovariates, effectSpecs);
   size_t K = s.effects.size();
-  std::vector<int> keyIndex;
-  for (R_xlen_t k = 0; k < keyCovariates.size(); ++k) {
-    keyIndex.push_back(s.ch.resourceIndex(Rcpp::as<std::string>(keyCovariates[k])));
+  ResourceGroups groups = groupResources(s, resourceSet, nodeSet, keyCovariates);
+  if (!groups.allPossible) {
+    return Rcpp::List::create(Rcpp::Named("possible") = false);
   }
-
-  // group the resources, in the order of resourceSet
-  std::map<std::vector<double>, size_t> groupOf;
-  std::vector<int> representative;
-  std::vector<double> weight;
-  for (int r : resourceSet) {
-    int edge = r - 1;
-    int j = s.ch.receiver[edge];
-    bool possible = std::find(nodeSet.begin(), nodeSet.end(), j + 1) != nodeSet.end();
-    if (!possible) {
-      return Rcpp::List::create(Rcpp::Named("possible") = false);
-    }
-    std::vector<double> key;
-    for (const OriginNet& net : s.ch.origins) key.push_back((double)net.origin[edge]);
-    key.push_back((double)j);
-    bool missing = false;
-    for (int k : keyIndex) {
-      double value = s.ch.resourceValues[k][edge];
-      if (ISNAN(value)) missing = true;
-      key.push_back(value);
-    }
-    if (!missing) {
-      auto found = groupOf.find(key);
-      if (found != groupOf.end()) {
-        weight[found->second] += 1;
-        continue;
-      }
-      groupOf[key] = representative.size();
-    }
-    // a new group (resources with missing values are not grouped)
-    representative.push_back(edge);
-    weight.push_back(1);
-  }
+  const std::vector<int>& representative = groups.representative;
+  const std::vector<double>& weight = groups.weight;
 
   size_t G = representative.size();
   double rows = (double)G * nodeSet.size();

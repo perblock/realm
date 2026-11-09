@@ -15,7 +15,10 @@ the estimation.}
 }
 \value{
 A numeric vector with one probability per resource, in the order of
-the resources.
+the resources. Only resources and destinations with considerWhenSampling are
+part of the model: the probabilities refer to choices among these
+destinations, and are NA for resources that are not considered when sampling
+and for resources whose observed destination is not considered.
 }
 \description{
 A function to calculate, for a fitted model, the probability of the observed

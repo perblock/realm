@@ -21,6 +21,10 @@ mpleNewtonCpp <- function(destinations, origins, cache, resourceCovariates, reso
     .Call(`_realm_mpleNewtonCpp`, destinations, origins, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, theta, derivatives)
 }
 
+pseudoProbabilitiesCpp <- function(destinations, origins, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, keyCovariates, theta) {
+    .Call(`_realm_pseudoProbabilitiesCpp`, destinations, origins, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, keyCovariates, theta)
+}
+
 mpleChoiceSetsCpp <- function(destinations, origins, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, keyCovariates, maxBytes) {
     .Call(`_realm_mpleChoiceSetsCpp`, destinations, origins, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, keyCovariates, maxBytes)
 }

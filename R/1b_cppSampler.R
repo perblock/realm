@@ -175,6 +175,15 @@ cppNetworkStatistics <- function(dep.var, state, cache, effects) {
   statistics
 }
 
+# cppKeyCovariates
+# the resource covariates that the effects use: resources that differ in them
+# can have different change statistics
+cppKeyCovariates <- function(specs) {
+  unique(as.character(unlist(lapply(specs, function(spec) {
+    spec[["resourceAttribute"]]
+  }))))
+}
+
 # mpleObjectiveCpp
 # as mpleObjectiveR, but calculated in C++. The change statistics are computed
 # once (mpleChoiceSetsCpp in src/sampler.cpp), storing each distinct choice set
@@ -187,12 +196,9 @@ mpleObjectiveCpp <- function(dep.var, state, cache, effects,
                              memoryLimit = getOption("realm.mpleMemoryLimit", 1e9)) {
   inputs <- cppChainInputs(dep.var, state, cache)
   specs <- cppEffectSpec(effects, inputs$state)
-  keyCovariates <- unique(as.character(unlist(lapply(specs, function(spec) {
-    spec[["resourceAttribute"]]
-  }))))
   sets <- mpleChoiceSetsCpp(inputs$destinations, inputs$origins, inputs$cache,
                             inputs$resourceCovariates, inputs$resourceSet, inputs$nodeSet,
-                            specs, keyCovariates, as.numeric(memoryLimit))
+                            specs, cppKeyCovariates(specs), as.numeric(memoryLimit))
   if (!sets$possible) {
     # an observed destination is not possible (not considered when sampling)
     return(function(theta, derivatives = TRUE) list(logPL = NA_real_))
@@ -208,6 +214,16 @@ mpleObjectiveCpp <- function(dep.var, state, cache, effects,
                   inputs$resourceCovariates, inputs$resourceSet, inputs$nodeSet, specs,
                   as.numeric(theta), derivatives)
   }
+}
+
+# cppPseudoProbabilities
+# the probabilities of getPseudoProbabilities, calculated in C++
+cppPseudoProbabilities <- function(state, effects, parameters) {
+  inputs <- cppChainInputs(state$dep.var, state, state$cache)
+  specs <- cppEffectSpec(effects, inputs$state)
+  pseudoProbabilitiesCpp(inputs$destinations, inputs$origins, inputs$cache,
+                         inputs$resourceCovariates, inputs$resourceSet, inputs$nodeSet,
+                         specs, cppKeyCovariates(specs), as.numeric(parameters))
 }
 
 # cppEffectValues

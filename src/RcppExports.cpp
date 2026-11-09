@@ -99,6 +99,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// pseudoProbabilitiesCpp
+Rcpp::NumericVector pseudoProbabilitiesCpp(Rcpp::IntegerVector destinations, Rcpp::List origins, Rcpp::List cache, Rcpp::List resourceCovariates, Rcpp::IntegerVector resourceSet, Rcpp::IntegerVector nodeSet, Rcpp::List effectSpecs, Rcpp::CharacterVector keyCovariates, Rcpp::NumericVector theta);
+RcppExport SEXP _realm_pseudoProbabilitiesCpp(SEXP destinationsSEXP, SEXP originsSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP resourceSetSEXP, SEXP nodeSetSEXP, SEXP effectSpecsSEXP, SEXP keyCovariatesSEXP, SEXP thetaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type destinations(destinationsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type origins(originsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type cache(cacheSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type resourceCovariates(resourceCovariatesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type resourceSet(resourceSetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type nodeSet(nodeSetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type effectSpecs(effectSpecsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type keyCovariates(keyCovariatesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type theta(thetaSEXP);
+    rcpp_result_gen = Rcpp::wrap(pseudoProbabilitiesCpp(destinations, origins, cache, resourceCovariates, resourceSet, nodeSet, effectSpecs, keyCovariates, theta));
+    return rcpp_result_gen;
+END_RCPP
+}
 // mpleChoiceSetsCpp
 Rcpp::List mpleChoiceSetsCpp(Rcpp::IntegerVector destinations, Rcpp::List origins, Rcpp::List cache, Rcpp::List resourceCovariates, Rcpp::IntegerVector resourceSet, Rcpp::IntegerVector nodeSet, Rcpp::List effectSpecs, Rcpp::CharacterVector keyCovariates, double maxBytes);
 RcppExport SEXP _realm_mpleChoiceSetsCpp(SEXP destinationsSEXP, SEXP originsSEXP, SEXP cacheSEXP, SEXP resourceCovariatesSEXP, SEXP resourceSetSEXP, SEXP nodeSetSEXP, SEXP effectSpecsSEXP, SEXP keyCovariatesSEXP, SEXP maxBytesSEXP) {
@@ -141,6 +160,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_realm_effectValuesCpp", (DL_FUNC) &_realm_effectValuesCpp, 9},
     {"_realm_tieSumsCpp", (DL_FUNC) &_realm_tieSumsCpp, 3},
     {"_realm_mpleNewtonCpp", (DL_FUNC) &_realm_mpleNewtonCpp, 9},
+    {"_realm_pseudoProbabilitiesCpp", (DL_FUNC) &_realm_pseudoProbabilitiesCpp, 9},
     {"_realm_mpleChoiceSetsCpp", (DL_FUNC) &_realm_mpleChoiceSetsCpp, 9},
     {"_realm_mpleEvaluateCpp", (DL_FUNC) &_realm_mpleEvaluateCpp, 6},
     {NULL, NULL, 0}

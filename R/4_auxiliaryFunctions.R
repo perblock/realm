@@ -217,7 +217,10 @@ getMultinomialStatistics <-
 #' the estimation.
 #'
 #' @returns A numeric vector with one probability per resource, in the order of
-#' the resources.
+#' the resources. Only resources and destinations with considerWhenSampling are
+#' part of the model: the probabilities refer to choices among these
+#' destinations, and are NA for resources that are not considered when sampling
+#' and for resources whose observed destination is not considered.
 #' @export
 #'
 #' @examples
@@ -241,17 +244,32 @@ getPseudoProbabilities <- function(ans, effects){
                 input, "'"))
   }
   
+  state <- ans$state
+  if (useCppSampler(effects, state)) {
+    return(cppPseudoProbabilities(state, effects, ans$estimates))
+  }
+  
   # calculate conditional logit statistics
-  MN_statistics <- getMultinomialStatistics(ans$state, effects)
+  MN_statistics <- getMultinomialStatistics(state, effects)
+  
+  # only resources and destinations that are considered when sampling
+  nodes <- state[[destinationNodeSet(state)]]
+  resources <- state[[resourceNodeSet(state)]]
+  MN_statistics <- MN_statistics[MN_statistics$target %in% nodes$ids[nodes$considerWhenSampling] &
+                                   resources$considerWhenSampling[MN_statistics$resource], ]
   
   # transform to utilities / objective function values
-  utility <- as.matrix(MN_statistics[, -(1:3)]) %*% ans$estimates
+  utility <- as.vector(as.matrix(MN_statistics[, -(1:3)]) %*% ans$estimates)
   
-  # calculate probabilities
-  choice_probas <- exp(utility[MN_statistics$choice == 1]) / 
-    (tapply(as.vector(utility), MN_statistics$resource, function(x) sum(exp(x))))
+  # calculate probabilities (with the largest utility of each resource subtracted)
+  weight <- exp(utility - stats::ave(utility, MN_statistics$resource, FUN = max))
+  total <- tapply(weight, MN_statistics$resource, sum)
+  observed <- which(MN_statistics$choice == 1)
+  choice_probas <- rep(NA_real_, length(resources$ids))
+  choice_probas[MN_statistics$resource[observed]] <-
+    weight[observed] / total[as.character(MN_statistics$resource[observed])]
   
-  as.vector(choice_probas)
+  choice_probas
 }
 
 
