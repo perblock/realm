@@ -192,7 +192,7 @@ getMultinomialStatistics <-
       
       statsVec[[number]] <- stats
     }
-    statsMat <- (Reduce(rbind, statsVec))
+    statsMat <- do.call(rbind, statsVec)
     
     colnames(statsMat) <-
       c("resource", "target", "choice", effects$name)
